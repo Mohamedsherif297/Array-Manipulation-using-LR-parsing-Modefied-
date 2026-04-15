@@ -1,0 +1,122 @@
+.tac-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: 100%;
+}
+
+.tac-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tac-header h3 {
+  color: #cccccc;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.tac-stats {
+  display: flex;
+  gap: 1rem;
+}
+
+.stat {
+  color: #999999;
+  font-size: 0.9rem;
+}
+
+.stat strong {
+  color: #667eea;
+  font-weight: 700;
+}
+
+.tac-code {
+  flex: 1;
+  background: #252526;
+  border-radius: 8px;
+  border: 1px solid #3e3e42;
+  padding: 1rem;
+  overflow: auto;
+  font-family: 'Courier New', monospace;
+}
+
+.tac-line {
+  display: flex;
+  padding: 0.4rem 0;
+  line-height: 1.6;
+}
+
+.tac-line:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.line-number {
+  color: #858585;
+  min-width: 50px;
+  text-align: right;
+  padding-right: 1rem;
+  user-select: none;
+  font-size: 0.85rem;
+}
+
+.line-content {
+  color: #d4d4d4;
+  font-size: 0.95rem;
+}
+
+.line-content.comment {
+  color: #6a9955;
+  font-style: italic;
+}
+
+.tac-comment {
+  color: #6a9955;
+}
+
+.tac-variable {
+  color: #4ec9b0;
+  font-weight: 600;
+}
+
+.tac-operator {
+  color: #d4d4d4;
+}
+
+.tac-expression {
+  color: #ce9178;
+}
+
+.tac-raw {
+  background: #252526;
+  border-radius: 8px;
+  border: 1px solid #3e3e42;
+  padding: 1.5rem;
+  max-height: 300px;
+  overflow: auto;
+}
+
+.tac-raw h4 {
+  color: #cccccc;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.tac-raw pre {
+  color: #d4d4d4;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.tac-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #858585;
+  font-size: 1.1rem;
+}

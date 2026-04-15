@@ -1,0 +1,14 @@
+{
+  "z": {
+    "type": "int",
+    "isArray": false
+  },
+  "y": {
+    "type": "int",
+    "isArray": false
+  },
+  "x": {
+    "type": "int",
+    "isArray": false
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "type": "Program",
+  "dataType": "void",
+  "children": [
+    {
+      "type": "DeclAssign",
+      "dataType": "int",
+      "semanticInfo": "declared_here",
+      "children": [
+        {
+          "type": "int",
+          "value": "int",
+          "dataType": "int"
+        },
+        {
+          "type": "ID",
+          "value": "x",
+          "dataType": "int"
+        },
+        {
+          "type": "NUM",
+          "value": "5",
+          "dataType": "int"
+        }
+      ]
+    },
+    {
+      "type": "DeclAssign",
+      "dataType": "int",
+      "semanticInfo": "declared_here",
+      "children": [
+        {
+          "type": "int",
+          "value": "int",
+          "dataType": "int"
+        },
+        {
+          "type": "ID",
+          "value": "y",
+          "dataType": "int"
+        },
+        {
+          "type": "NUM",
+          "value": "6",
+          "dataType": "int"
+        }
+      ]
+    },
+    {
+      "type": "DeclAssign",
+      "dataType": "int",
+      "semanticInfo": "declared_here",
+      "children": [
+        {
+          "type": "int",
+          "value": "int",
+          "dataType": "int"
+        },
+        {
+          "type": "ID",
+          "value": "z",
+          "dataType": "int"
+        },
+        {
+          "type": "ID",
+          "value": "x",
+          "dataType": "int"
+        }
+      ]
+    }
+  ]
+}

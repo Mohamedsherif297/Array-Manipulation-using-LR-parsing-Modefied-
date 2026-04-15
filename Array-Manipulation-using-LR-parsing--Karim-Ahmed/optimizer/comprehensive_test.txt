@@ -1,0 +1,34 @@
+// Test case demonstrating all 5 optimization techniques
+// DECL a  type=int
+// DECL b  type=int
+// DECL c  type=int
+// DECL d  type=int
+// DECL e  type=int
+// DECL unused  type=int
+
+// Constant Folding: 2 + 3 should become 5
+t1 = 2 + 3
+a = t1
+
+// Constant Propagation: use value of a (which is 5)
+t2 = a * 2
+b = t2
+
+// Common Subexpression Elimination: 2 + 3 computed again
+t3 = 2 + 3
+c = t3
+
+// Dead Code: unused variable
+t4 = 10 + 20
+unused = t4
+
+// More constant folding
+t5 = 4 * 5
+d = t5
+
+// Common subexpression: a * 2 computed again
+t6 = a * 2
+e = t6
+
+// Dead code: result never used
+t7 = 100 + 200

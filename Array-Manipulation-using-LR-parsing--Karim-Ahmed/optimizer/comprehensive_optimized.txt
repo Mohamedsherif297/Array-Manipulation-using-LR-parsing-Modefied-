@@ -1,0 +1,12 @@
+// DECL a  type=int
+// DECL b  type=int
+// DECL c  type=int
+// DECL d  type=int
+// DECL e  type=int
+// DECL unused  type=int
+a = 5
+b = 10
+c = 5
+unused = 30
+d = 20
+e = 10
