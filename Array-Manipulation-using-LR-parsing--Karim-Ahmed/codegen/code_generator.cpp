@@ -176,23 +176,33 @@ void CodeGenerator::genDeclAssign(shared_ptr<ASTNode> node) {
     emit("DECL", typeName, "", varName);
 
     bool hasArrayDims = (node->children.size() >= 4 &&
-                         node->children[2]->type == "Dimensions");
+                         (node->children[2]->type == "Dimensions" || 
+                          node->children[2]->type == "ArraySize"));
 
     if (hasArrayDims) {
         // Array declaration with literal initialiser
-        auto& arrNode = node->children[3]; // "Array" node
+        auto& arrNode = node->children[3]; // "Array" or "ArrayInit" node
 
         // Look up symbol to get dimension sizes
         auto it = symTable_.find(varName);
         if (it == symTable_.end()) {
-            error("Symbol '" + varName + "' not found in symbol table.");
-            return;
+            // Symbol not found - use default element size
+            CGSymbol defaultSym;
+            defaultSym.name = varName;
+            defaultSym.type = typeName;
+            defaultSym.isArray = true;
+            defaultSym.size1 = 0;  // Will be determined by initializer
+            defaultSym.size2 = 0;
+            genArrayInit(node->children[1], arrNode, defaultSym);
+        } else {
+            genArrayInit(node->children[1], arrNode, it->second);
         }
-        genArrayInit(node->children[1], arrNode, it->second);
     } else {
         // Scalar declaration with expression initialiser
         string rhs = genExpr(node->children[2]);
-        emit("ASSIGN", rhs, "", varName);
+        if (!rhs.empty()) {
+            emit("ASSIGN", rhs, "", varName);
+        }
     }
 }
 
@@ -276,6 +286,7 @@ string CodeGenerator::genExpr(shared_ptr<ASTNode> node) {
 
     // ---- Literals ----
     if (t == "NUM")    return node->value;
+    if (t == "Number") return node->value;  // Handle "Number" node type
     if (t == "STRING") return "\"" + node->value + "\"";
     if (t == "CHAR")   return "'" + node->value + "'";
 
@@ -293,6 +304,11 @@ string CodeGenerator::genExpr(shared_ptr<ASTNode> node) {
     if (t == "Expr" || t == "Term" || t == "Factor") {
         if (!node->children.empty())
             return genExpr(node->children[0]);
+        return "";
+    }
+
+    // ---- ArraySize and ArrayInit are not expressions, skip them ----
+    if (t == "ArraySize" || t == "ArrayInit" || t == "Dimensions") {
         return "";
     }
 
@@ -403,6 +419,20 @@ void CodeGenerator::genArrayInit(shared_ptr<ASTNode> idNode,
     int elemSize = sym.elementSize();
     int flatIndex = 0; // linear element index
 
+    // Handle both "Array" and "ArrayInit" node types
+    if (arrayNode->type == "ArrayInit") {
+        // Flat array initialization - all children are direct elements
+        for (auto& elemNode : arrayNode->children) {
+            string val = genExpr(elemNode);
+            string tOff = newTemp();
+            emit("*", to_string(flatIndex), to_string(elemSize), tOff);
+            emit("STORE", arrName, tOff, val);
+            ++flatIndex;
+        }
+        return;
+    }
+
+    // Original "Array" node handling with ArrayRow children
     for (auto& rowNode : arrayNode->children) {
         // Each child of Array is an ArrayRow (or a bare Expr for 1-D)
         if (rowNode->type == "ArrayRow") {

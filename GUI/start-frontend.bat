@@ -1,0 +1,3 @@
+@echo off
+echo Starting Frontend Dev Server...
+npx vite

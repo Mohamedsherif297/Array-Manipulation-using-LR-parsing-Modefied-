@@ -21,13 +21,31 @@ void printTestCase(const string& code) {
     cout << "   \"" << code << "\"\n";
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     
     printSeparator("COMPILER PIPELINE TEST");
     
-    // Read source code from stdin if available, otherwise use default
+    // Read source code from file argument, stdin, or use default
     string src;
-    if (!isatty(fileno(stdin))) {
+    
+    if (argc > 1) {
+        // Read from file specified as argument
+        ifstream inputFile(argv[1]);
+        if (inputFile) {
+            string line;
+            while (getline(inputFile, line)) {
+                src += line + "\n";
+            }
+            inputFile.close();
+            // Remove trailing newline
+            if (!src.empty() && src.back() == '\n') {
+                src.pop_back();
+            }
+        } else {
+            cerr << "Error: Cannot open input file: " << argv[1] << "\n";
+            return 1;
+        }
+    } else if (!isatty(fileno(stdin))) {
         // Input is piped, read all lines from stdin
         string line;
         while (getline(cin, line)) {
@@ -136,7 +154,7 @@ int main() {
     printSeparator("PHASE 3: SEMANTIC ANALYSIS");
     
     cout << "Running semantic analyzer...\n";
-    int semanticResult = system("cd semantic && ./semantic_main ../ast.json . 2>&1");
+    int semanticResult = system("cd semantic && semantic_main.exe ../ast.json . 2>&1");
     
     if (semanticResult != 0) {
         cout << "\n⚠️  Semantic analyzer not compiled or failed.\n";
@@ -153,7 +171,7 @@ int main() {
     printSeparator("PHASE 4: CODE GENERATION");
     
     cout << "Running code generator...\n";
-    int codegenResult = system("cd codegen && ./codegen ../semantic/annotated_ast.json ../semantic/symbol_table.json ir.txt 2>&1");
+    int codegenResult = system("cd codegen && codegen.exe ../semantic/annotated_ast.json ../semantic/symbol_table.json ir.txt 2>&1");
     
     if (codegenResult != 0) {
         cout << "\n⚠️  Code generator not compiled or failed.\n";
@@ -182,7 +200,7 @@ int main() {
     printSeparator("PHASE 5: CODE OPTIMIZATION");
     
     cout << "Running optimizer...\n";
-    int optimizerResult = system("cd optimizer && ./optimizer ../codegen/ir.txt optimized_ir.txt 2>&1");
+    int optimizerResult = system("cd optimizer && optimizer.exe ../codegen/ir.txt optimized_ir.txt 2>&1");
     
     if (optimizerResult != 0) {
         cout << "\n⚠️  Optimizer not compiled or failed.\n";

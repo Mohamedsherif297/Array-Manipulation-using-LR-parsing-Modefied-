@@ -1,6 +1,1 @@
 // DECL x  type=int
-x = 5
-// DECL y  type=int
-y = 6
-// DECL z  type=int
-z = 5

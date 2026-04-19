@@ -102,11 +102,22 @@ void SemanticAnalyzer::visitDecl(shared_ptr<ASTNode> node) {
     sym.size2   = 0;
 
     // Optional Dimensions node
-    if (node->children.size() >= 3 && node->children[2]->type == "Dimensions") {
+    if (node->children.size() >= 3 && 
+        (node->children[2]->type == "Dimensions" || node->children[2]->type == "ArraySize")) {
         auto& dims = node->children[2];
         sym.isArray = true;
-        sym.size1   = (dims->children.size() >= 1) ? stoi(dims->children[0]->value) : 0;
-        sym.size2   = (dims->children.size() >= 2) ? stoi(dims->children[1]->value) : 0;
+        
+        // Handle both "Dimensions" (with children) and "ArraySize" (with value)
+        if (dims->type == "ArraySize") {
+            // Single dimension stored in value
+            sym.size1 = stoi(dims->value);
+            sym.size2 = 0;
+        } else {
+            // Multiple dimensions stored in children
+            sym.size1   = (dims->children.size() >= 1) ? stoi(dims->children[0]->value) : 0;
+            sym.size2   = (dims->children.size() >= 2) ? stoi(dims->children[1]->value) : 0;
+        }
+        
         dims->dataType = "int"; // dimensions are always integer
         for (auto& d : dims->children) d->dataType = "int";
     }
@@ -148,13 +159,24 @@ void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
     sym.size2   = 0;
 
     bool hasArrayDims = (node->children.size() >= 4 &&
-                         node->children[2]->type == "Dimensions");
+                         (node->children[2]->type == "Dimensions" ||
+                          node->children[2]->type == "ArraySize"));
 
     if (hasArrayDims) {
         auto& dims = node->children[2];
         sym.isArray = true;
-        sym.size1   = (dims->children.size() >= 1) ? stoi(dims->children[0]->value) : 0;
-        sym.size2   = (dims->children.size() >= 2) ? stoi(dims->children[1]->value) : 0;
+        
+        // Handle both "Dimensions" (with children) and "ArraySize" (with value)
+        if (dims->type == "ArraySize") {
+            // Single dimension stored in value
+            sym.size1 = stoi(dims->value);
+            sym.size2 = 0;
+        } else {
+            // Multiple dimensions stored in children
+            sym.size1   = (dims->children.size() >= 1) ? stoi(dims->children[0]->value) : 0;
+            sym.size2   = (dims->children.size() >= 2) ? stoi(dims->children[1]->value) : 0;
+        }
+        
         dims->dataType = "int";
         for (auto& d : dims->children) d->dataType = "int";
     }

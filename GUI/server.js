@@ -1,6 +1,6 @@
 import express from 'express'
 import cors from 'cors'
-import { exec } from 'child_process'
+import { exec, spawn } from 'child_process'
 import { promisify } from 'util'
 import fs from 'fs/promises'
 import path from 'path'
@@ -45,15 +45,37 @@ app.post('/api/compile', async (req, res) => {
 
     // Step 1: Run the main compiler (lexer + parser)
     console.log('Step 1: Running lexer and parser...')
-    const mainExe = path.join(COMPILER_PATH, 'Main')
     
-    // Modify Main.cpp to read from file instead of hardcoded string
-    // For now, we'll use a workaround by creating a modified version
-    const { stdout: mainOutput, stderr: mainError } = await execAsync(
-      `cd "${COMPILER_PATH}" && echo '${code.replace(/'/g, "'\\''")}' | ./Main`,
-      { timeout: 10000 }
-    )
+    // Run Main.exe with piped input
+    const mainProcess = spawn('cmd.exe', ['/c', `type "${tempFile}" | Main.exe`], {
+      cwd: COMPILER_PATH,
+      shell: true,
+      timeout: 10000
+    })
+    
+    let mainOutput = ''
+    let mainError = ''
+    
+    mainProcess.stdout.on('data', (data) => {
+      mainOutput += data.toString()
+    })
+    
+    mainProcess.stderr.on('data', (data) => {
+      mainError += data.toString()
+    })
+    
+    await new Promise((resolve, reject) => {
+      mainProcess.on('close', (code) => {
+        if (code !== 0 && code !== -1) {
+          reject(new Error(`Main.exe exited with code ${code}`))
+        } else {
+          resolve()
+        }
+      })
+      mainProcess.on('error', reject)
+    })
 
+    console.log('Main output:', mainOutput)
     if (mainError) {
       console.error('Parser stderr:', mainError)
     }
@@ -62,32 +84,83 @@ app.post('/api/compile', async (req, res) => {
 
     // Step 2: Run semantic analyzer
     console.log('Step 2: Running semantic analyzer...')
-    const semanticExe = path.join(COMPILER_PATH, 'semantic', 'semantic_main')
     
-    const { stdout: semanticOutput, stderr: semanticError } = await execAsync(
-      `cd "${path.join(COMPILER_PATH, 'semantic')}" && ./semantic_main "${astFile}" "${TEMP_DIR}"`,
+    const semanticProcess = spawn(
+      path.join(COMPILER_PATH, 'semantic', 'semantic_main.exe'),
+      [astFile, TEMP_DIR],
       { timeout: 10000 }
     )
+    
+    let semanticOutput = ''
+    let semanticError = ''
+    
+    semanticProcess.stdout.on('data', (data) => {
+      semanticOutput += data.toString()
+    })
+    
+    semanticProcess.stderr.on('data', (data) => {
+      semanticError += data.toString()
+    })
+    
+    await new Promise((resolve, reject) => {
+      semanticProcess.on('close', (code) => {
+        if (code !== 0 && code !== -1) {
+          reject(new Error(`Semantic analyzer exited with code ${code}`))
+        } else {
+          resolve()
+        }
+      })
+      semanticProcess.on('error', reject)
+    })
 
+    console.log('Semantic output:', semanticOutput)
     if (semanticError) {
       console.error('Semantic stderr:', semanticError)
     }
 
     // Step 3: Run code generator
     console.log('Step 3: Running code generator...')
-    const codegenExe = path.join(COMPILER_PATH, 'codegen', 'codegen')
     
-    const { stdout: codegenOutput, stderr: codegenError } = await execAsync(
-      `cd "${path.join(COMPILER_PATH, 'codegen')}" && ./codegen "${annotatedAstFile}" "${symbolTableFile}" "${irFile}"`,
+    const codegenProcess = spawn(
+      path.join(COMPILER_PATH, 'codegen', 'codegen.exe'),
+      [annotatedAstFile, symbolTableFile, irFile],
       { timeout: 10000 }
     )
+    
+    let codegenOutput = ''
+    let codegenError = ''
+    
+    codegenProcess.stdout.on('data', (data) => {
+      codegenOutput += data.toString()
+    })
+    
+    codegenProcess.stderr.on('data', (data) => {
+      codegenError += data.toString()
+    })
+    
+    await new Promise((resolve, reject) => {
+      codegenProcess.on('close', (code) => {
+        if (code !== 0 && code !== -1) {
+          reject(new Error(`Code generator exited with code ${code}`))
+        } else {
+          resolve()
+        }
+      })
+      codegenProcess.on('error', reject)
+    })
+
+    console.log('Codegen output:', codegenOutput)
+    if (codegenError) {
+      console.error('Codegen stderr:', codegenError)
+    }
 
     if (codegenError) {
       console.error('Codegen stderr:', codegenError)
     }
 
     // Read all output files
-    const [annotatedAst, symbolTable, tac] = await Promise.all([
+    const [ast, annotatedAst, symbolTable, tac] = await Promise.all([
+      fs.readFile(astFile, 'utf-8').then(JSON.parse).catch(() => null),
       fs.readFile(annotatedAstFile, 'utf-8').then(JSON.parse).catch(() => null),
       fs.readFile(symbolTableFile, 'utf-8').then(JSON.parse).catch(() => null),
       fs.readFile(irFile, 'utf-8').catch(() => null)
@@ -96,7 +169,7 @@ app.post('/api/compile', async (req, res) => {
     // Clean up temporary files
     await Promise.all([
       fs.unlink(tempFile).catch(() => {}),
-      fs.unlink(path.join(COMPILER_PATH, 'ast.json')).catch(() => {}),
+      fs.unlink(astFile).catch(() => {}),
       fs.unlink(annotatedAstFile).catch(() => {}),
       fs.unlink(symbolTableFile).catch(() => {}),
       fs.unlink(irFile).catch(() => {})
@@ -104,7 +177,7 @@ app.post('/api/compile', async (req, res) => {
 
     // Return the results
     res.json({
-      ast: annotatedAst,
+      ast: ast || annotatedAst,  // Use original AST if available, fallback to annotated
       symbolTable: symbolTable,
       tac: tac
     })
