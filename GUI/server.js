@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const app = express()
-const PORT = 3001
+const PORT = 3003
 
 app.use(cors())
 app.use(express.json())
@@ -34,8 +34,7 @@ app.post('/api/compile', async (req, res) => {
 
   const timestamp = Date.now()
   const tempFile = path.join(TEMP_DIR, `input_${timestamp}.txt`)
-  const parserDir = path.join(COMPILER_PATH, 'parser')
-  const astFile = path.join(parserDir, 'ast.json')  // Parser outputs to parser/ast.json
+  const astFile = path.join(COMPILER_PATH, 'ast.json')  // Main outputs to root
   const annotatedAstFile = path.join(TEMP_DIR, 'annotated_ast.json')  // semantic_main uses fixed names
   const symbolTableFile = path.join(TEMP_DIR, 'symbol_table.json')
   const irFile = path.join(TEMP_DIR, 'ir.txt')
@@ -47,11 +46,11 @@ app.post('/api/compile', async (req, res) => {
     // Step 1: Run the main compiler (lexer + parser)
     console.log('Step 1: Running lexer and parser...')
     
-    // Run Parser_Main.exe with file argument
+    // Run Main.exe with file argument
     const mainProcess = spawn(
-      path.join(COMPILER_PATH, 'parser', 'Parser_Main.exe'),
+      path.join(COMPILER_PATH, 'Main.exe'),
       [tempFile],
-      { cwd: path.join(COMPILER_PATH, 'parser'), timeout: 10000 }
+      { cwd: COMPILER_PATH, timeout: 10000 }
     )
     
     let mainOutput = ''

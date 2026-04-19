@@ -27,14 +27,123 @@
           "dataType": "int",
           "children": [
             {
-              "type": "Number",
-              "value": "1",
-              "dataType": "int"
-            },
-            {
-              "type": "Number",
-              "value": "2",
-              "dataType": "int"
+              "type": "ArrayElements",
+              "dataType": "int",
+              "children": [
+                {
+                  "type": "ArrayElements",
+                  "dataType": "int",
+                  "children": [
+                    {
+                      "type": "ArrayElement",
+                      "dataType": "int",
+                      "children": [
+                        {
+                          "type": "ArrayInit",
+                          "dataType": "int",
+                          "children": [
+                            {
+                              "type": "ArrayElements",
+                              "dataType": "int",
+                              "children": [
+                                {
+                                  "type": "ArrayElements",
+                                  "dataType": "int",
+                                  "children": [
+                                    {
+                                      "type": "ArrayElement",
+                                      "dataType": "int",
+                                      "children": [
+                                        {
+                                          "type": "Number",
+                                          "value": "1",
+                                          "dataType": "int"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": ",",
+                                  "value": ",",
+                                  "dataType": "unknown"
+                                },
+                                {
+                                  "type": "ArrayElement",
+                                  "dataType": "int",
+                                  "children": [
+                                    {
+                                      "type": "Number",
+                                      "value": "2",
+                                      "dataType": "int"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": ",",
+                  "value": ",",
+                  "dataType": "unknown"
+                },
+                {
+                  "type": "ArrayElement",
+                  "dataType": "int",
+                  "children": [
+                    {
+                      "type": "ArrayInit",
+                      "dataType": "int",
+                      "children": [
+                        {
+                          "type": "ArrayElements",
+                          "dataType": "int",
+                          "children": [
+                            {
+                              "type": "ArrayElements",
+                              "dataType": "int",
+                              "children": [
+                                {
+                                  "type": "ArrayElement",
+                                  "dataType": "int",
+                                  "children": [
+                                    {
+                                      "type": "Number",
+                                      "value": "3",
+                                      "dataType": "int"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": ",",
+                              "value": ",",
+                              "dataType": "unknown"
+                            },
+                            {
+                              "type": "ArrayElement",
+                              "dataType": "int",
+                              "children": [
+                                {
+                                  "type": "Number",
+                                  "value": "4",
+                                  "dataType": "int"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
             }
           ]
         }
@@ -57,7 +166,7 @@
         },
         {
           "type": "ArraySize",
-          "value": "2",
+          "value": "5",
           "dataType": "int"
         },
         {
@@ -65,164 +174,139 @@
           "dataType": "int",
           "children": [
             {
-              "type": "Number",
-              "value": "1",
-              "dataType": "int"
-            },
-            {
-              "type": "Number",
-              "value": "2",
-              "dataType": "int"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "DeclAssign",
-      "dataType": "int",
-      "semanticInfo": "declared_here",
-      "children": [
-        {
-          "type": "DATATYPE",
-          "value": "int",
-          "dataType": "int"
-        },
-        {
-          "type": "ID",
-          "value": "z",
-          "dataType": "int"
-        },
-        {
-          "type": "ArraySize",
-          "value": "2",
-          "dataType": "int"
-        },
-        {
-          "type": "ArrayInit",
-          "dataType": "int",
-          "children": [
-            {
-              "type": "BinaryOp",
+              "type": "ArrayElements",
               "dataType": "int",
               "children": [
                 {
-                  "type": "ArrayAccess",
+                  "type": "ArrayElements",
                   "dataType": "int",
-                  "semanticInfo": "array_access",
                   "children": [
                     {
-                      "type": "ID",
-                      "value": "x",
-                      "dataType": "int"
+                      "type": "ArrayElements",
+                      "dataType": "int",
+                      "children": [
+                        {
+                          "type": "ArrayElements",
+                          "dataType": "int",
+                          "children": [
+                            {
+                              "type": "ArrayElements",
+                              "dataType": "int",
+                              "children": [
+                                {
+                                  "type": "ArrayElement",
+                                  "dataType": "int",
+                                  "children": [
+                                    {
+                                      "type": "Number",
+                                      "value": "1",
+                                      "dataType": "int"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": ",",
+                              "value": ",",
+                              "dataType": "unknown"
+                            },
+                            {
+                              "type": "ArrayElement",
+                              "dataType": "int",
+                              "children": [
+                                {
+                                  "type": "Number",
+                                  "value": "2",
+                                  "dataType": "int"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": ",",
+                          "value": ",",
+                          "dataType": "unknown"
+                        },
+                        {
+                          "type": "ArrayElement",
+                          "dataType": "int",
+                          "children": [
+                            {
+                              "type": "Number",
+                              "value": "3",
+                              "dataType": "int"
+                            }
+                          ]
+                        }
+                      ]
                     },
                     {
-                      "type": "Number",
-                      "value": "0",
-                      "dataType": "int"
+                      "type": ",",
+                      "value": ",",
+                      "dataType": "unknown"
+                    },
+                    {
+                      "type": "ArrayElement",
+                      "dataType": "unknown",
+                      "children": [
+                        {
+                          "type": "BinaryOp",
+                          "dataType": "unknown",
+                          "children": [
+                            {
+                              "type": "ArrayAccess",
+                              "dataType": "unknown",
+                              "semanticInfo": "array_access"
+                            },
+                            {
+                              "type": "+",
+                              "value": "+"
+                            },
+                            {
+                              "type": "Number",
+                              "value": "3",
+                              "dataType": "int"
+                            }
+                          ]
+                        }
+                      ]
                     }
                   ]
                 },
                 {
-                  "type": "+",
-                  "value": "+"
+                  "type": ",",
+                  "value": ",",
+                  "dataType": "unknown"
                 },
                 {
-                  "type": "ArrayAccess",
-                  "dataType": "int",
-                  "semanticInfo": "array_access",
+                  "type": "ArrayElement",
+                  "dataType": "unknown",
                   "children": [
                     {
-                      "type": "ID",
-                      "value": "y",
-                      "dataType": "int"
-                    },
-                    {
-                      "type": "Number",
-                      "value": "0",
-                      "dataType": "int"
+                      "type": "BinaryOp",
+                      "dataType": "unknown",
+                      "children": [
+                        {
+                          "type": "ArrayAccess",
+                          "dataType": "unknown",
+                          "semanticInfo": "array_access"
+                        },
+                        {
+                          "type": "+",
+                          "value": "+"
+                        },
+                        {
+                          "type": "Number",
+                          "value": "2",
+                          "dataType": "int"
+                        }
+                      ]
                     }
                   ]
                 }
               ]
-            },
-            {
-              "type": "BinaryOp",
-              "dataType": "int",
-              "children": [
-                {
-                  "type": "ArrayAccess",
-                  "dataType": "int",
-                  "semanticInfo": "array_access",
-                  "children": [
-                    {
-                      "type": "ID",
-                      "value": "x",
-                      "dataType": "int"
-                    },
-                    {
-                      "type": "Number",
-                      "value": "1",
-                      "dataType": "int"
-                    }
-                  ]
-                },
-                {
-                  "type": "+",
-                  "value": "+"
-                },
-                {
-                  "type": "ArrayAccess",
-                  "dataType": "int",
-                  "semanticInfo": "array_access",
-                  "children": [
-                    {
-                      "type": "ID",
-                      "value": "y",
-                      "dataType": "int"
-                    },
-                    {
-                      "type": "Number",
-                      "value": "1",
-                      "dataType": "int"
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "DeclAssign",
-      "dataType": "int",
-      "semanticInfo": "declared_here",
-      "children": [
-        {
-          "type": "DATATYPE",
-          "value": "int",
-          "dataType": "int"
-        },
-        {
-          "type": "ID",
-          "value": "a",
-          "dataType": "int"
-        },
-        {
-          "type": "ArrayAccess",
-          "dataType": "int",
-          "semanticInfo": "array_access",
-          "children": [
-            {
-              "type": "ID",
-              "value": "z",
-              "dataType": "int"
-            },
-            {
-              "type": "Number",
-              "value": "0",
-              "dataType": "int"
             }
           ]
         }

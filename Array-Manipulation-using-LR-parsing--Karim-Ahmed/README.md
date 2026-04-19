@@ -1,99 +1,41 @@
-# Array-Manipulation-using-LR-parsing-
-This project involves developing a C++ application designed to parse and execute array manipulation commands. It serves as a practical implementation of the Compiler Design Phases discussed in the course, specifically focusing on syntax and semantic analysis.
+# Array Manipulation Compiler - Core Implementation
 
-## Project Structure
+This directory contains the core compiler implementation with LR parsing for array manipulation.
 
-```
-Array-Manipulation-using-LR-parsing--Karim-Ahmed/
-├── lexer/              # Phase 1: Lexical Analysis
-│   ├── Token_Class.h
-│   ├── Symbol_Table.h
-│   ├── Lexer.h
-│   └── README.md
-│
-├── parser/             # Phase 2: Syntax Analysis (LR(1) Parser)
-│   ├── Grammar.h
-│   ├── Item.h
-│   ├── Item.cpp
-│   ├── First_Set.h
-│   ├── Parser_States.cpp
-│   ├── Parsing_Table.cpp
-│   ├── Parser.h
-│   └── README.md
-│
-├── semantic/           # Phase 3: Semantic Analysis
-│   ├── ASTNode.h
-│   ├── ast_builder.h/cpp
-│   ├── symbol_table.h/cpp
-│   ├── semantic_analyzer.h/cpp
-│   ├── semantic_output.h/cpp
-│   ├── semantic_main.cpp
-│   └── README.md
-│
-├── codegen/            # Phase 4: Code Generation (TAC)
-│   ├── codegen_types.h
-│   ├── ast_loader.h/cpp
-│   ├── symbol_table_loader.h/cpp
-│   ├── code_generator.h/cpp
-│   ├── codegen_main.cpp
-│   ├── Makefile
-│   └── README.md
-│
-├── Main.cpp            # Main entry point (integrates all phases)
-├── CFG.md              # Context-Free Grammar documentation
-└── To_do_list.md       # Project progress tracker
-```
+## Components
 
-## Compilation Pipeline
+- **Main.cpp** - Main compiler pipeline orchestrator
+- **lexer/** - Lexical analyzer (tokenization)
+- **parser/** - LR(1) parser implementation  
+- **semantic/** - Semantic analyzer and type checker
+- **codegen/** - Three-address code generator
+- **optimizer/** - Code optimization engine
 
-```
-Source Code
-    ↓
-[Lexer] → Tokens
-    ↓
-[Parser] → AST (ast.json)
-    ↓
-[Semantic Analyzer] → Annotated AST + Symbol Table
-    ↓
-[Code Generator] → Three-Address Code (IR)
-```
+## Compilation
 
-## Quick Start
-
-### Compile and Run Main Program
+To compile the main executable:
 ```bash
-g++ -std=c++17 Main.cpp -o Main
-./Main
+compile_main_only.bat
 ```
 
-### Run Individual Phases
+This creates `Main.exe` which runs the complete compilation pipeline.
 
-**Semantic Analysis:**
+## Usage
+
+The compiler can be used standalone:
 ```bash
-cd semantic
-g++ -std=c++17 semantic_main.cpp ast_builder.cpp semantic_analyzer.cpp semantic_output.cpp symbol_table.cpp -o semantic_main
-./semantic_main ../ast.json .
+Main.exe input_file.txt
 ```
 
-**Code Generation:**
-```bash
-cd codegen
-make
-./codegen ../semantic/annotated_ast.json ../semantic/symbol_table.json ir.txt
-```
+Or through the web GUI (see main README.md in parent directory).
 
-## Features
+## Output Files
 
-- ✅ Full LR(1) parser with canonical collection
-- ✅ FIRST set computation
-- ✅ Closure and GOTO operations
-- ✅ Parsing table construction with conflict detection
-- ✅ AST generation
-- ✅ Semantic analysis with type checking
-- ✅ Symbol table management
-- ✅ Intermediate code generation (TAC)
-- ✅ Support for 1D and 2D arrays
-- ✅ Expression evaluation with operator precedence
+- `ast.json` - Abstract Syntax Tree
+- `semantic/annotated_ast.json` - Semantically analyzed AST  
+- `semantic/symbol_table.json` - Symbol table with type information
+- `codegen/ir.txt` - Generated three-address code
+- `optimizer/optimized_ir.txt` - Optimized intermediate code
 
 ## Supported Language Features
 

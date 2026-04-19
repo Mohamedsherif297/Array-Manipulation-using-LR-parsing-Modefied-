@@ -107,7 +107,7 @@ Node* parse(vector<pair<string,string>> input) {
 
             if (p.lhs == "Program") {
                 newNode = children[0];
-            }
+            } 
             else if (p.lhs == "StmtList") {
                 Node* node = new Node();
                 node->type = "Program";

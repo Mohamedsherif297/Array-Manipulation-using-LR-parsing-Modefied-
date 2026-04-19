@@ -1,1 +1,6 @@
 // DECL x  type=int
+t1 = 0 * 4
+x[t1] = 
+// DECL y  type=int
+t2 = 0 * 4
+y[t2] = 1

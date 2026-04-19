@@ -1,1 +1,3 @@
 // DECL x  type=int
+// DECL y  type=int
+y[0] = 1
