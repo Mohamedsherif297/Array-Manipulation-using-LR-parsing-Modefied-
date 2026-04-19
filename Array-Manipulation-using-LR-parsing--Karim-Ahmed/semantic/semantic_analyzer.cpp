@@ -78,9 +78,9 @@ void SemanticAnalyzer::visitStatement(shared_ptr<ASTNode> node) {
 
 // ---------------------------------------------------------------------------
 // Declaration:  Type  ID  [ArrayDims]  ;
-//   children[0] = Type node
-//   children[1] = ID   node
-//   children[2] = Dimensions node (optional)
+//   children[0] = Type
+//   children[1] = ID
+//   children[2] = Dimensions  (optional, for arrays)
 // ---------------------------------------------------------------------------
 
 void SemanticAnalyzer::visitDecl(shared_ptr<ASTNode> node) {
@@ -141,12 +141,17 @@ void SemanticAnalyzer::visitDecl(shared_ptr<ASTNode> node) {
 // ---------------------------------------------------------------------------
 
 void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
-    if (node->children.size() < 3) return;
+    if (node->children.size() < 3) {
+        cerr << "[visitDeclAssign] Not enough children: " << node->children.size() << "\n";
+        return;
+    }
 
     string typeName = node->children[0]->value.empty()
                       ? node->children[0]->type
                       : node->children[0]->value;
     string varName  = node->children[1]->value;
+
+    cerr << "[visitDeclAssign] Processing: " << varName << " of type " << typeName << "\n";
 
     node->children[0]->dataType = typeName;
     node->children[1]->dataType = typeName;
@@ -158,9 +163,15 @@ void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
     sym.size1   = 0;
     sym.size2   = 0;
 
-    bool hasArrayDims = (node->children.size() >= 4 &&
-                         (node->children[2]->type == "Dimensions" ||
+    // Check if children[2] is array dimensions (Dimensions or ArraySize)
+    bool hasArrayDims = (node->children.size() >= 3 &&
+                         (node->children[2]->type == "Dimensions" || 
                           node->children[2]->type == "ArraySize"));
+
+    cerr << "[visitDeclAssign] hasArrayDims=" << hasArrayDims << ", children.size()=" << node->children.size() << "\n";
+    if (node->children.size() >= 3) {
+        cerr << "[visitDeclAssign] children[2]->type=" << node->children[2]->type << "\n";
+    }
 
     if (hasArrayDims) {
         auto& dims = node->children[2];
@@ -169,12 +180,18 @@ void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
         // Handle both "Dimensions" (with children) and "ArraySize" (with value)
         if (dims->type == "ArraySize") {
             // Single dimension stored in value
-            sym.size1 = stoi(dims->value);
+            try {
+                sym.size1 = stoi(dims->value);
+            } catch (...) {
+                sym.size1 = 0;
+            }
             sym.size2 = 0;
+            cerr << "[visitDeclAssign] ArraySize: size1=" << sym.size1 << "\n";
         } else {
             // Multiple dimensions stored in children
             sym.size1   = (dims->children.size() >= 1) ? stoi(dims->children[0]->value) : 0;
             sym.size2   = (dims->children.size() >= 2) ? stoi(dims->children[1]->value) : 0;
+            cerr << "[visitDeclAssign] Dimensions: size1=" << sym.size1 << ", size2=" << sym.size2 << "\n";
         }
         
         dims->dataType = "int";
@@ -186,32 +203,32 @@ void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
         node->semanticInfo = "duplicate";
     } else {
         node->semanticInfo = "declared_here";
+        cerr << "[visitDeclAssign] Declared: " << varName << " isArray=" << sym.isArray << "\n";
     }
 
     // Annotate the RHS
     if (hasArrayDims) {
-        // children[3] is the Array literal
-        auto& arrNode = node->children[3];
-        arrNode->dataType = typeName;
-        // Validate each row
-        for (auto& row : arrNode->children) {
-            row->dataType = typeName;
-            for (auto& elem : row->children) {
+        // children[3] is the Array literal (ArrayInit node)
+        if (node->children.size() >= 4) {
+            auto& arrNode = node->children[3];
+            arrNode->dataType = typeName;
+            // Validate each element in the ArrayInit
+            for (auto& elem : arrNode->children) {
                 string elemType = visitExpr(elem);
                 string resolved = resolveType(typeName, elemType);
                 if (resolved == "mismatch") {
-                    addError("Type mismatch in array literal: expected '" + typeName +
-                             "' but got '" + elemType + "'", *elem);
+                    addError("Array element type mismatch: expected '" + typeName +
+                             "', got '" + elemType + "'", *elem);
                 }
             }
         }
     } else {
-        // Scalar assignment — children[2] is the Expr
+        // Scalar: validate RHS expression
         string rhsType = visitExpr(node->children[2]);
         string resolved = resolveType(typeName, rhsType);
         if (resolved == "mismatch") {
-            addError("Type mismatch in declaration: cannot assign '" + rhsType +
-                     "' to variable of type '" + typeName + "'", *node->children[1]);
+            addError("Type mismatch in assignment: '" + typeName +
+                     "' = '" + rhsType + "'", *node->children[2]);
         }
     }
 
@@ -219,7 +236,7 @@ void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
 }
 
 // ---------------------------------------------------------------------------
-// Assignment:  LHS  =  Expr
+// Assignment:  LHS  =  Expr  ;
 //   children[0] = ID or ArrayAccess
 //   children[1] = Expr
 // ---------------------------------------------------------------------------
@@ -230,7 +247,7 @@ void SemanticAnalyzer::visitAssign(shared_ptr<ASTNode> node) {
     auto& lhsNode = node->children[0];
     auto& rhsNode = node->children[1];
 
-    string lhsType;
+    string lhsType = "unknown";
 
     if (lhsNode->type == "ID") {
         string varName = lhsNode->value;
@@ -238,11 +255,10 @@ void SemanticAnalyzer::visitAssign(shared_ptr<ASTNode> node) {
         if (!sym) {
             addError("Undeclared variable '" + varName + "'", *lhsNode);
             lhsType = "unknown";
+        } else if (sym->isArray) {
+            addError("Array '" + varName + "' used without index", *lhsNode);
+            lhsType = "unknown";
         } else {
-            if (sym->isArray) {
-                addError("Cannot assign to array '" + varName +
-                         "' without index", *lhsNode);
-            }
             lhsType = sym->type;
         }
         lhsNode->dataType = lhsType;
@@ -256,42 +272,42 @@ void SemanticAnalyzer::visitAssign(shared_ptr<ASTNode> node) {
     string resolved = resolveType(lhsType, rhsType);
 
     if (resolved == "mismatch") {
-        addError("Type mismatch in assignment: cannot assign '" + rhsType +
-                 "' to '" + lhsType + "'", *node);
+        addError("Type mismatch in assignment: '" + lhsType +
+                 "' = '" + rhsType + "'", *rhsNode);
     }
 
     node->dataType = lhsType;
 }
 
 // ---------------------------------------------------------------------------
-// Expression evaluator — returns the resolved type and annotates the node
+// Expression visitor — returns the resolved type
 // ---------------------------------------------------------------------------
 
 string SemanticAnalyzer::visitExpr(shared_ptr<ASTNode> node) {
     if (!node) return "unknown";
 
+    const string& t = node->type;
+
     // Leaf: numeric literal
-    if (node->type == "NUM") {
-        // Determine int vs float by presence of '.'
-        string t = (node->value.find('.') != string::npos) ? "float" : "int";
-        node->dataType = t;
-        return t;
+    if (t == "NUM" || t == "Number") {
+        node->dataType = "int";
+        return "int";
     }
 
     // Leaf: string literal
-    if (node->type == "STRING") {
+    if (t == "STRING") {
         node->dataType = "string";
         return "string";
     }
 
     // Leaf: char literal
-    if (node->type == "CHAR") {
+    if (t == "CHAR") {
         node->dataType = "char";
         return "char";
     }
 
     // Leaf: identifier
-    if (node->type == "ID") {
+    if (t == "ID") {
         string varName = node->value;
         const SemanticSymbol* sym = symTable_.lookup(varName);
         if (!sym) {
@@ -309,16 +325,37 @@ string SemanticAnalyzer::visitExpr(shared_ptr<ASTNode> node) {
     }
 
     // Array access
-    if (node->type == "ArrayAccess") {
-        string t = visitArrayAccess(node);
-        return t;
+    if (t == "ArrayAccess") {
+        string type = visitArrayAccess(node);
+        return type;
+    }
+
+    // BinaryOp node (from parser JSON with operator field)
+    if (t == "BinaryOp") {
+        if (node->children.size() < 3) {
+            node->dataType = "unknown";
+            return "unknown";
+        }
+        // children[0] = left, children[1] = operator, children[2] = right
+        string t1 = visitExpr(node->children[0]);
+        string t2 = visitExpr(node->children[2]);
+        string resolved = resolveType(t1, t2);
+
+        if (resolved == "mismatch") {
+            string op = node->children[1]->value;
+            addError("Type mismatch in expression: '" + t1 +
+                     "' " + op + " '" + t2 + "'", *node);
+            resolved = "unknown";
+        }
+        node->dataType = resolved;
+        return resolved;
     }
 
     // Binary expression node produced by the parser:
     // The parser collapses Expr/Term/Factor chains, so a binary op node
     // has type "+" / "-" / "*" / "/" with two children.
-    if (node->type == "+" || node->type == "-" ||
-        node->type == "*" || node->type == "/") {
+    if (t == "+" || t == "-" ||
+        t == "*" || t == "/") {
 
         if (node->children.size() < 2) {
             node->dataType = "unknown";
@@ -330,7 +367,7 @@ string SemanticAnalyzer::visitExpr(shared_ptr<ASTNode> node) {
 
         if (resolved == "mismatch") {
             addError("Type mismatch in expression: '" + t1 +
-                     "' " + node->type + " '" + t2 + "'", *node);
+                     "' " + t + " '" + t2 + "'", *node);
             resolved = "unknown";
         }
         node->dataType = resolved;
@@ -338,19 +375,19 @@ string SemanticAnalyzer::visitExpr(shared_ptr<ASTNode> node) {
     }
 
     // Parenthesised expression — single child
-    if (node->type == "Expr" || node->type == "Term" || node->type == "Factor") {
+    if (t == "Expr" || t == "Term" || t == "Factor") {
         if (!node->children.empty()) {
-            string t = visitExpr(node->children[0]);
-            node->dataType = t;
-            return t;
+            string type = visitExpr(node->children[0]);
+            node->dataType = type;
+            return type;
         }
     }
 
     // Fallback: recurse and return first resolved child type
     string result = "unknown";
     for (auto& child : node->children) {
-        string t = visitExpr(child);
-        if (t != "unknown") result = t;
+        string type = visitExpr(child);
+        if (type != "unknown") result = type;
     }
     node->dataType = result;
     return result;
@@ -365,6 +402,7 @@ string SemanticAnalyzer::visitExpr(shared_ptr<ASTNode> node) {
 string SemanticAnalyzer::visitArrayAccess(shared_ptr<ASTNode> node) {
     node->semanticInfo = "array_access";
 
+    // After AST loader fix, ArrayAccess nodes should have children[0] = ID, children[1] = index
     if (node->children.size() < 2) {
         node->dataType = "unknown";
         return "unknown";

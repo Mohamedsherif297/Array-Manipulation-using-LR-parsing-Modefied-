@@ -1,6 +1,24 @@
 {
-  "x": {
+  "a": {
     "type": "int",
     "isArray": false
+  },
+  "z": {
+    "type": "int",
+    "isArray": true,
+    "size1": 2,
+    "size2": 0
+  },
+  "y": {
+    "type": "int",
+    "isArray": true,
+    "size1": 2,
+    "size2": 0
+  },
+  "x": {
+    "type": "int",
+    "isArray": true,
+    "size1": 2,
+    "size2": 0
   }
 }

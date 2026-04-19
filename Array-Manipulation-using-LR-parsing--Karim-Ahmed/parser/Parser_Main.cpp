@@ -2,19 +2,50 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <unistd.h>
 
 #include "Parser.h"
 #include "../lexer/Lexer.h"
 
 using namespace std;
 
-int main() {
+int main(int argc, char* argv[]) {
 
-    string src = "int x [2] = {1,2};"
-                 "int y [2]= {1,2};"
-                 "int z [2]= {x[0]+y[0] , x[1]+y[1]};"
-                 "int a = z[0];"
-    ;
+    string src;
+    
+    // Read from file argument or stdin
+    if (argc > 1) {
+        // Read from file
+        ifstream inputFile(argv[1]);
+        if (inputFile) {
+            string line;
+            while (getline(inputFile, line)) {
+                src += line + "\n";
+            }
+            inputFile.close();
+            if (!src.empty() && src.back() == '\n') {
+                src.pop_back();
+            }
+        } else {
+            cerr << "Error: Cannot open file: " << argv[1] << "\n";
+            return 1;
+        }
+    } else if (!isatty(fileno(stdin))) {
+        // Read from piped stdin
+        string line;
+        while (getline(cin, line)) {
+            src += line + "\n";
+        }
+        if (!src.empty() && src.back() == '\n') {
+            src.pop_back();
+        }
+    } else {
+        // Default test case
+        src = "int x [2] = {1,2};"
+              "int y [2]= {1,2};"
+              "int z [2]= {x[0]+y[0] , x[1]+y[1]};"
+              "int a = z[0];";
+    }
 
     SymbolTable st;
     Lexer lexer(src, st);
@@ -65,7 +96,7 @@ int main() {
         ofstream file("ast.json");
 
         if (!file) {
-            cout << "Error creating file\n";
+            cerr << "Error creating file\n";
             return 1;
         }
 
