@@ -41,11 +41,11 @@ inline vector <Production> grammar = {
 {"DeclAssignStmt", {"Type", "ID", "ArrayDims", "=", "ArrayLiteral", ";"}},
 
 // ===== ARRAY LITERAL (UPDATED) =====
-{"ArrayLiteral", {"{", "ArrayElements", "}"}}, 
-{"ArrayElements", {"ArrayElements", ",", "ArrayElement"}}, 
-{"ArrayElements", {"ArrayElement"}}, 
-{"ArrayElement", {"Expr"}}, 
-{"ArrayElement", {"ArrayLiteral"}},
+{"ArrayLiteral", {"{", "Elements", "}"}}, 
+{"Elements", {"Elements", ",", "Element"}}, 
+{"Elements", {"Element"}}, 
+{"Element", {"Expr"}}, 
+{"Element", {"ArrayLiteral"}},
 
 // ===== ARRAY ACCESS (UPDATED) =====
 {"ArrayAccess", {"ArrayAccess", "[", "Expr", "]"}},
@@ -102,7 +102,7 @@ inline set<string> nonTerminals = {
 
 "DeclStmt","AssignStmt","DeclAssignStmt",
 
-"ArrayLiteral","ArrayElements","ArrayElement",
+"ArrayLiteral","Elements","Element",
 
 "ArrayAccess","ArrayDims","Expr","Term",
 

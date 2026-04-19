@@ -42,6 +42,8 @@ private:
 
     // Helpers
     string resolveType(const string& t1, const string& t2);
+    bool   isAssignmentCompatible(const string& lhsType, const string& rhsType);
     bool   isNumericType(const string& t);
     bool   isIntegerType(const string& t);
+    int    countArrayElements(shared_ptr<ASTNode> arrayNode);
 };

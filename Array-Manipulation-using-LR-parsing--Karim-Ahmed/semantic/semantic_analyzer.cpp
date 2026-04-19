@@ -39,6 +39,21 @@ string SemanticAnalyzer::resolveType(const string& t1, const string& t2) {
     return "mismatch";
 }
 
+// Strict assignment checking - no implicit conversions allowed
+bool SemanticAnalyzer::isAssignmentCompatible(const string& lhsType, const string& rhsType) {
+    if (lhsType == rhsType) return true;
+    if (lhsType == "unknown" || rhsType == "unknown") return true; // Don't double-report errors
+    
+    // Reject assignment of array types to scalar variables
+    if (rhsType == "array") return false;
+    
+    // Allow some safe implicit conversions
+    if (lhsType == "float" && rhsType == "int") return true;   // int -> float is safe
+    if (lhsType == "double" && (rhsType == "int" || rhsType == "float")) return true; // int/float -> double is safe
+    
+    return false; // All other conversions are not allowed
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -142,7 +157,6 @@ void SemanticAnalyzer::visitDecl(shared_ptr<ASTNode> node) {
 
 void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
     if (node->children.size() < 3) {
-        cerr << "[visitDeclAssign] Not enough children: " << node->children.size() << "\n";
         return;
     }
 
@@ -150,8 +164,6 @@ void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
                       ? node->children[0]->type
                       : node->children[0]->value;
     string varName  = node->children[1]->value;
-
-    cerr << "[visitDeclAssign] Processing: " << varName << " of type " << typeName << "\n";
 
     node->children[0]->dataType = typeName;
     node->children[1]->dataType = typeName;
@@ -163,21 +175,19 @@ void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
     sym.size1   = 0;
     sym.size2   = 0;
 
-    // Check if children[2] is array dimensions (Dimensions or ArraySize)
-    bool hasArrayDims = (node->children.size() >= 3 &&
+    // Check if this is an array declaration with initialization
+    // Array: Type ID ArrayDims = ArrayInit  (4 children)
+    // Scalar: Type ID = Expr                (3 children)
+    bool hasArrayDims = (node->children.size() >= 4 &&
                          (node->children[2]->type == "Dimensions" || 
-                          node->children[2]->type == "ArraySize"));
-
-    cerr << "[visitDeclAssign] hasArrayDims=" << hasArrayDims << ", children.size()=" << node->children.size() << "\n";
-    if (node->children.size() >= 3) {
-        cerr << "[visitDeclAssign] children[2]->type=" << node->children[2]->type << "\n";
-    }
+                          node->children[2]->type == "ArraySize" ||
+                          (node->children[2]->type == "Number" && node->children.size() == 4)));  // Number only if 4 children
 
     if (hasArrayDims) {
         auto& dims = node->children[2];
         sym.isArray = true;
         
-        // Handle both "Dimensions" (with children) and "ArraySize" (with value)
+        // Handle different dimension node types
         if (dims->type == "ArraySize") {
             // Single dimension stored in value
             try {
@@ -186,12 +196,18 @@ void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
                 sym.size1 = 0;
             }
             sym.size2 = 0;
-            cerr << "[visitDeclAssign] ArraySize: size1=" << sym.size1 << "\n";
+        } else if (dims->type == "Number") {
+            // Handle parser issue where Number appears instead of ArraySize for 1D arrays
+            try {
+                sym.size1 = stoi(dims->value);
+            } catch (...) {
+                sym.size1 = 0;
+            }
+            sym.size2 = 0;
         } else {
-            // Multiple dimensions stored in children
+            // Multiple dimensions stored in children (Dimensions node)
             sym.size1   = (dims->children.size() >= 1) ? stoi(dims->children[0]->value) : 0;
             sym.size2   = (dims->children.size() >= 2) ? stoi(dims->children[1]->value) : 0;
-            cerr << "[visitDeclAssign] Dimensions: size1=" << sym.size1 << ", size2=" << sym.size2 << "\n";
         }
         
         dims->dataType = "int";
@@ -203,7 +219,6 @@ void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
         node->semanticInfo = "duplicate";
     } else {
         node->semanticInfo = "declared_here";
-        cerr << "[visitDeclAssign] Declared: " << varName << " isArray=" << sym.isArray << "\n";
     }
 
     // Annotate the RHS
@@ -212,6 +227,22 @@ void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
         if (node->children.size() >= 4) {
             auto& arrNode = node->children[3];
             arrNode->dataType = typeName;
+            
+            // Count the number of initializer elements
+            int initializerCount = countArrayElements(arrNode);
+            int expectedSize = sym.size1; // For 1D arrays, use size1
+            
+            // For 2D arrays, we expect size1 * size2 elements in flattened form
+            if (sym.size2 > 0) {
+                expectedSize = sym.size1 * sym.size2;
+            }
+            
+            // Validate array size matches initializer count
+            if (initializerCount != expectedSize) {
+                addError("Array size mismatch: declared size " + to_string(expectedSize) +
+                         " but provided " + to_string(initializerCount) + " initializers", *arrNode);
+            }
+            
             // Validate each element in the ArrayInit
             for (auto& elem : arrNode->children) {
                 string elemType = visitExpr(elem);
@@ -223,12 +254,11 @@ void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
             }
         }
     } else {
-        // Scalar: validate RHS expression
+        // Scalar: validate RHS expression with strict type checking
         string rhsType = visitExpr(node->children[2]);
-        string resolved = resolveType(typeName, rhsType);
-        if (resolved == "mismatch") {
-            addError("Type mismatch in assignment: '" + typeName +
-                     "' = '" + rhsType + "'", *node->children[2]);
+        if (!isAssignmentCompatible(typeName, rhsType)) {
+            addError("Type mismatch in assignment: cannot assign '" + rhsType +
+                     "' to '" + typeName + "'", *node->children[2]);
         }
     }
 
@@ -269,11 +299,10 @@ void SemanticAnalyzer::visitAssign(shared_ptr<ASTNode> node) {
     }
 
     string rhsType = visitExpr(rhsNode);
-    string resolved = resolveType(lhsType, rhsType);
-
-    if (resolved == "mismatch") {
-        addError("Type mismatch in assignment: '" + lhsType +
-                 "' = '" + rhsType + "'", *rhsNode);
+    
+    if (!isAssignmentCompatible(lhsType, rhsType)) {
+        addError("Type mismatch in assignment: cannot assign '" + rhsType +
+                 "' to '" + lhsType + "'", *rhsNode);
     }
 
     node->dataType = lhsType;
@@ -290,8 +319,17 @@ string SemanticAnalyzer::visitExpr(shared_ptr<ASTNode> node) {
 
     // Leaf: numeric literal
     if (t == "NUM" || t == "Number") {
-        node->dataType = "int";
-        return "int";
+        // Determine type based on the value
+        string value = node->value;
+        if (value.find('.') != string::npos) {
+            // Contains decimal point - it's a float
+            node->dataType = "float";
+            return "float";
+        } else {
+            // No decimal point - it's an integer
+            node->dataType = "int";
+            return "int";
+        }
     }
 
     // Leaf: string literal
@@ -402,34 +440,54 @@ string SemanticAnalyzer::visitExpr(shared_ptr<ASTNode> node) {
 string SemanticAnalyzer::visitArrayAccess(shared_ptr<ASTNode> node) {
     node->semanticInfo = "array_access";
 
-    // After AST loader fix, ArrayAccess nodes should have children[0] = ID, children[1] = index
+    // ArrayAccess nodes should have children[0] = ID or nested ArrayAccess, children[1] = index
     if (node->children.size() < 2) {
         node->dataType = "unknown";
         return "unknown";
     }
 
-    auto& idNode  = node->children[0];
+    auto& baseNode = node->children[0];
     auto& idxNode = node->children[1];
 
-    string varName = idNode->value;
-    const SemanticSymbol* sym = symTable_.lookup(varName);
+    string varName;
+    const SemanticSymbol* sym = nullptr;
+    int accessDepth = 0;
+
+    // Count the depth of array access and find the base variable
+    auto current = node;
+    while (current && current->type == "ArrayAccess") {
+        accessDepth++;
+        if (current->children.size() >= 1) {
+            current = current->children[0];
+        } else {
+            break;
+        }
+    }
+    
+    if (current && current->type == "ID") {
+        varName = current->value;
+        sym = symTable_.lookup(varName);
+    } else {
+        addError("Invalid array access structure", *node);
+        node->dataType = "unknown";
+        return "unknown";
+    }
 
     if (!sym) {
-        addError("Undeclared variable '" + varName + "'", *idNode);
-        idNode->dataType  = "unknown";
-        node->dataType    = "unknown";
+        addError("Undeclared variable '" + varName + "'", *baseNode);
+        node->dataType = "unknown";
         return "unknown";
     }
 
     if (!sym->isArray) {
-        addError("Variable '" + varName + "' is not an array", *idNode);
-        idNode->dataType = sym->type;
-        node->dataType   = "unknown";
+        addError("Variable '" + varName + "' is not an array", *baseNode);
+        node->dataType = "unknown";
         return "unknown";
     }
 
-    idNode->dataType = sym->type;
-
+    // Determine array dimensionality
+    int arrayDimensions = (sym->size2 > 0) ? 2 : 1;
+    
     // Validate index type — must be integer
     string idxType = visitExpr(idxNode);
     if (!isIntegerType(idxType) && idxType != "unknown") {
@@ -437,6 +495,66 @@ string SemanticAnalyzer::visitArrayAccess(shared_ptr<ASTNode> node) {
                  "' must be an integer, got '" + idxType + "'", *idxNode);
     }
 
-    node->dataType = sym->type;
-    return sym->type;
+    // Determine the result type based on access depth vs array dimensions
+    if (accessDepth > arrayDimensions) {
+        addError("Too many indices for array '" + varName + "': expected " + 
+                 to_string(arrayDimensions) + " but got " + to_string(accessDepth), *node);
+        node->dataType = "unknown";
+        return "unknown";
+    } else if (accessDepth == arrayDimensions) {
+        // Full indexing - returns scalar element
+        node->dataType = sym->type;
+        return sym->type;
+    } else {
+        // Partial indexing - returns array of reduced dimensionality
+        // This should not be assignable to scalar variables
+        node->dataType = "array";
+        return "array";
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Helper function to count array elements in initialization
+// ---------------------------------------------------------------------------
+
+int SemanticAnalyzer::countArrayElements(shared_ptr<ASTNode> arrayNode) {
+    if (!arrayNode) return 0;
+    
+    // Handle different array initialization structures
+    if (arrayNode->type == "ArrayInit") {
+        int count = 0;
+        for (auto& child : arrayNode->children) {
+            if (child->type == "ArrayElements") {
+                count += countArrayElements(child);
+            } else if (child->type == "ArrayElement") {
+                count += countArrayElements(child);
+            } else if (child->type == "ArrayInit") {
+                // Nested array initialization (for 2D arrays)
+                count += countArrayElements(child);
+            } else if (child->type != "," && child->type != "{" && child->type != "}") {
+                // Skip comma and brace tokens, count actual elements
+                count++;
+            }
+        }
+        return count;
+    } else if (arrayNode->type == "ArrayElements") {
+        int count = 0;
+        for (auto& child : arrayNode->children) {
+            if (child->type == "ArrayElement") {
+                count += countArrayElements(child);
+            } else if (child->type == "ArrayElements") {
+                count += countArrayElements(child);
+            } else if (child->type != "," && child->type != "{" && child->type != "}") {
+                // Skip comma and brace tokens, count actual elements
+                count++;
+            }
+        }
+        return count;
+    } else if (arrayNode->type == "ArrayElement") {
+        // ArrayElement contains one actual value
+        return 1;
+    } else {
+        // Direct value nodes (Number, ID, expressions, etc.)
+        return 1;
+    }
 }

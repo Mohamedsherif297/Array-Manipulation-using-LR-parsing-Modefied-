@@ -1,8 +1,0 @@
-// DECL x  type=int
-// DECL y  type=int
-// DECL z  type=int
-// DECL result  type=int
-x = 6
-y = 6
-z = 15
-result = 12

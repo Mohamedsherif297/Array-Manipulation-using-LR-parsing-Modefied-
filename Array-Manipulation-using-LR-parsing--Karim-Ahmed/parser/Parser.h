@@ -9,8 +9,6 @@
 
 using namespace std;
 
-using namespace std;
-
 struct Node {
     string type;
     string value;
@@ -28,7 +26,6 @@ Node* parse(vector<pair<string,string>> input) {
     stack<Node*> nodeStack;
 
     stateStack.push(0);
-
     int index = 0;
 
     while (true) {
@@ -39,48 +36,42 @@ Node* parse(vector<pair<string,string>> input) {
 
         if (!ACTION.count({state, token})) {
 
-    cout << "\n--- SYNTAX ERROR ---\n";
+            cout << "\n--- SYNTAX ERROR ---\n";
+            cout << "Unexpected token: " << token
+                 << " (value: " << value << ")\n";
+            cout << "At input index: " << index << "\n";
+            cout << "Expected one of: ";
 
-    cout << "Unexpected token: " << token
-         << " (value: " << value << ")\n";
+            for (auto &entry : ACTION) {
+                if (entry.first.first == state) {
+                    cout << entry.first.second << " ";
+                }
+            }
 
-    cout << "At input index: " << index << "\n";
-
-    cout << "Expected one of: ";
-
-    for (auto &entry : ACTION) {
-        if (entry.first.first == state) {
-            cout << entry.first.second << " ";
+            cout << "\n--------------------\n";
+            return nullptr;
         }
-    }
-
-    cout << "\n--------------------\n";
-
-    return nullptr;
-    }
 
         string action = ACTION[{state, token}];
 
-        // SHIFT
+        // ================= SHIFT =================
         if (action[0] == 'S') {
             int nextState = stoi(action.substr(1));
 
             Node* node = new Node();
             node->type = token;
-            node->value = value; // temporary (better: actual lexeme)
+            node->value = value;
 
             nodeStack.push(node);
             stateStack.push(nextState);
-
             index++;
         }
 
-        // REDUCE
+        // ================= REDUCE =================
         else if (action[0] == 'R') {
 
             int prodIndex = stoi(action.substr(1));
             Production p = grammar[prodIndex];
-
 
             vector<Node*> children;
 
@@ -88,26 +79,17 @@ Node* parse(vector<pair<string,string>> input) {
                 stateStack.pop();
                 children.push_back(nodeStack.top());
                 nodeStack.pop();
-
-
             }
 
             reverse(children.begin(), children.end());
 
             Node* newNode = nullptr;
 
-            auto appendItems = [&](Node* source, vector<Node*>& dest) {
-                if (!source) return;
-                if ((source->type == "RowList" || source->type == "ExprList") && !source->children.empty()) {
-                    dest.insert(dest.end(), source->children.begin(), source->children.end());
-                } else {
-                    dest.push_back(source);
-                }
-            };
-
+            // ================= PROGRAM =================
             if (p.lhs == "Program") {
                 newNode = children[0];
-            } 
+            }
+
             else if (p.lhs == "StmtList") {
                 Node* node = new Node();
                 node->type = "Program";
@@ -121,100 +103,138 @@ Node* parse(vector<pair<string,string>> input) {
 
                 newNode = node;
             }
+
             else if (p.lhs == "Stmt") {
                 newNode = children[0];
             }
+
+            // ================= DECL =================
             else if (p.lhs == "DeclStmt") {
                 Node* node = new Node();
                 node->type = "Declaration";
-                node->children.push_back(children[0]);
-                node->children.push_back(children[1]);
+                node->children = {children[0], children[1]};
                 newNode = node;
             }
+
+            // ================= ASSIGN =================
             else if (p.lhs == "AssignStmt") {
                 Node* node = new Node();
                 node->type = "Assignment";
-                node->children.push_back(children[0]);
-                node->children.push_back(children[2]);
+                node->children = {children[0], children[2]};
                 newNode = node;
             }
+
+            // ================= DECL + ASSIGN =================
             else if (p.lhs == "DeclAssignStmt") {
                 Node* node = new Node();
                 node->type = "DeclAssign";
-                node->children.push_back(children[0]);
-                node->children.push_back(children[1]);
+
+                node->children.push_back(children[0]); // type
+                node->children.push_back(children[1]); // id
 
                 if (children.size() == 6) {
-                    node->children.push_back(children[2]);
-                    node->children.push_back(children[4]);
+                    // Type ID ArrayDims = ArrayLiteral ;
+                    node->children.push_back(children[2]); // dims
+                    node->children.push_back(children[4]); // value
+                } else if (children.size() == 5) {
+                    // Type ID = Expr ; 
+                    node->children.push_back(children[3]); // value
+                } else if (children.size() == 7) {
+                    // This might be a case where ArrayDims got parsed as separate tokens
+                    // Check if children[2] is '[', children[3] is NUM, children[4] is ']'
+                    if (children[2]->type == "[" && children[4]->type == "]" && 
+                        (children[3]->type == "NUM" || children[3]->type == "Number")) {
+                        // Create ArraySize node
+                        Node* arraySize = new Node();
+                        arraySize->type = "ArraySize";
+                        arraySize->value = children[3]->value;
+                        node->children.push_back(arraySize);
+                        node->children.push_back(children[6]); // ArrayLiteral after '='
+                    } else {
+                        // Fallback: treat as regular assignment
+                        node->children.push_back(children[3]); // value
+                    }
                 } else {
-                    node->children.push_back(children[3]);
+                    // Fallback for other cases
+                    if (children.size() > 3) {
+                        node->children.push_back(children[children.size() - 2]); // value before ';'
+                    }
                 }
 
                 newNode = node;
             }
+
+            // ================= ARRAY DIMS =================
             else if (p.lhs == "ArrayDims") {
-                Node* node = new Node();
-                node->type = "ArraySize";
-
                 if (children.size() == 4) {
-                    node->value = children[2]->value;
-                } else {
-                    node->value = children[1]->value;
-                }
+                    Node* prev = children[0];
 
-                newNode = node;
+                    if (prev->type != "Dimensions") {
+                        Node* dims = new Node();
+                        dims->type = "Dimensions";
+
+                        Node* first = new Node();
+                        first->type = "Number";
+                        first->value = prev->value;
+                        dims->children.push_back(first);
+
+                        prev = dims;
+                    }
+
+                    Node* newDim = new Node();
+                    newDim->type = "Number";
+                    newDim->value = children[2]->value;
+
+                    prev->children.push_back(newDim);
+                    newNode = prev;
+                } else {
+                    Node* node = new Node();
+                    node->type = "Number";
+                    node->value = children[1]->value;
+                    newNode = node;
+                }
             }
+
+            // ================= ARRAY LITERAL =================
             else if (p.lhs == "ArrayLiteral") {
                 Node* node = new Node();
                 node->type = "ArrayInit";
 
-                vector<Node*> items;
-                appendItems(children[1], items);
-                node->children = items;
-
+                node->children = children[1]->children;
                 newNode = node;
             }
-            else if (p.lhs == "RowList") {
-                Node* node = new Node();
-                node->type = "RowList";
 
-                vector<Node*> items;
+            else if (p.lhs == "Elements") {
+                Node* node = new Node();
+                node->type = "Elements";
+
                 if (children.size() == 3) {
-                    appendItems(children[0], items);
-                    appendItems(children[2], items);
+                    node->children = children[0]->children;
+                    node->children.push_back(children[2]);
                 } else {
-                    appendItems(children[0], items);
+                    node->children.push_back(children[0]);
                 }
 
-                node->children = items;
                 newNode = node;
             }
-            else if (p.lhs == "Row") {
-                newNode = (children.size() == 1) ? children[0] : children[1];
-            }
-            else if (p.lhs == "ExprList") {
-                Node* node = new Node();
-                node->type = "ExprList";
 
-                vector<Node*> items;
-                if (children.size() == 3) {
-                    appendItems(children[0], items);
-                    appendItems(children[2], items);
-                } else {
-                    appendItems(children[0], items);
-                }
-
-                node->children = items;
-                newNode = node;
+            else if (p.lhs == "Element") {
+                newNode = children[0];
             }
+
+            // ================= ARRAY ACCESS =================
             else if (p.lhs == "ArrayAccess") {
                 Node* node = new Node();
                 node->type = "ArrayAccess";
-                node->arrayName = children[0]->value;
-                node->index = children[2];
+
+                // Convert to children format for consistency with AST loader
+                node->children.push_back(children[0]); // ID or nested ArrayAccess
+                node->children.push_back(children[2]); // index expression
+
                 newNode = node;
             }
+
+            // ================= EXPRESSIONS =================
             else if (p.lhs == "Expr" || p.lhs == "Term") {
                 if (children.size() == 3) {
                     Node* node = new Node();
@@ -227,6 +247,7 @@ Node* parse(vector<pair<string,string>> input) {
                     newNode = children[0];
                 }
             }
+
             else if (p.lhs == "Factor") {
                 if (children.size() == 3) {
                     newNode = children[1];
@@ -239,12 +260,14 @@ Node* parse(vector<pair<string,string>> input) {
                     newNode = children[0];
                 }
             }
+
             else if (p.lhs == "Type") {
                 Node* node = new Node();
                 node->type = "DATATYPE";
                 node->value = children[0]->value;
                 newNode = node;
             }
+
             else {
                 Node* node = new Node();
                 node->type = p.lhs;
@@ -265,7 +288,7 @@ Node* parse(vector<pair<string,string>> input) {
             stateStack.push(nextState);
         }
 
-        // ACCEPT
+        // ================= ACCEPT =================
         else if (action == "ACC") {
             cout << "Parsing Successful\n";
             return nodeStack.top();
@@ -301,13 +324,11 @@ void printJSON(Node* node, int indent = 0, ostream* outStream = nullptr) {
 
     out << space << "{\n";
 
-    // type
     out << space << "  \"type\": \"" << node->type << "\"";
 
-    // print value if exists
     if (!node->value.empty()) {
         out << ",\n";
-        if ((node->type == "Number" || node->type == "ArraySize") && isNumericString(node->value)) {
+        if ((node->type == "Number") && isNumericString(node->value)) {
             out << space << "  \"value\": " << node->value;
         } else {
             out << space << "  \"value\": \"" << node->value << "\"";
@@ -342,24 +363,20 @@ void printJSON(Node* node, int indent = 0, ostream* outStream = nullptr) {
         printJSON(node->index, indent + 4, outStream);
     }
 
-    // children
     if (!node->children.empty()) {
         out << ",\n";
         out << space << "  \"children\": [\n";
 
         for (int i = 0; i < node->children.size(); i++) {
             printJSON(node->children[i], indent + 4, outStream);
-
             if (i != node->children.size() - 1)
                 out << ",";
-
             out << "\n";
         }
 
         out << space << "  ]\n";
         out << space << "}";
-    } 
-    else {
+    } else {
         out << "\n" << space << "}";
     }
 }
