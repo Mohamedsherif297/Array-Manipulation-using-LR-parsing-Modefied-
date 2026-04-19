@@ -34,7 +34,8 @@ app.post('/api/compile', async (req, res) => {
 
   const timestamp = Date.now()
   const tempFile = path.join(TEMP_DIR, `input_${timestamp}.txt`)
-  const astFile = path.join(COMPILER_PATH, 'ast.json')  // Main outputs to its own directory
+  const parserDir = path.join(COMPILER_PATH, 'parser')
+  const astFile = path.join(parserDir, 'ast.json')  // Parser outputs to parser/ast.json
   const annotatedAstFile = path.join(TEMP_DIR, 'annotated_ast.json')  // semantic_main uses fixed names
   const symbolTableFile = path.join(TEMP_DIR, 'symbol_table.json')
   const irFile = path.join(TEMP_DIR, 'ir.txt')
@@ -46,12 +47,12 @@ app.post('/api/compile', async (req, res) => {
     // Step 1: Run the main compiler (lexer + parser)
     console.log('Step 1: Running lexer and parser...')
     
-    // Run Main.exe with piped input
-    const mainProcess = spawn('cmd.exe', ['/c', `type "${tempFile}" | Main.exe`], {
-      cwd: COMPILER_PATH,
-      shell: true,
-      timeout: 10000
-    })
+    // Run Parser_Main.exe with file argument
+    const mainProcess = spawn(
+      path.join(COMPILER_PATH, 'parser', 'Parser_Main.exe'),
+      [tempFile],
+      { cwd: path.join(COMPILER_PATH, 'parser'), timeout: 10000 }
+    )
     
     let mainOutput = ''
     let mainError = ''
@@ -188,7 +189,7 @@ app.post('/api/compile', async (req, res) => {
     // Clean up on error
     await Promise.all([
       fs.unlink(tempFile).catch(() => {}),
-      fs.unlink(path.join(COMPILER_PATH, 'ast.json')).catch(() => {}),
+      fs.unlink(astFile).catch(() => {}),
       fs.unlink(annotatedAstFile).catch(() => {}),
       fs.unlink(symbolTableFile).catch(() => {}),
       fs.unlink(irFile).catch(() => {})
