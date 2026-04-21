@@ -1,6 +1,20 @@
 {
-  "karim": {
+  "bad3": {
     "type": "string",
-    "isArray": false
+    "isArray": true,
+    "size1": 0,
+    "size2": 0
+  },
+  "bad2": {
+    "type": "float",
+    "isArray": true,
+    "size1": 0,
+    "size2": 0
+  },
+  "bad1": {
+    "type": "int",
+    "isArray": true,
+    "size1": 0,
+    "size2": 0
   }
 }

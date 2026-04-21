@@ -1,1 +1,9 @@
-// DECL karim  type=string
+// DECL good1  type=int
+// DECL good2  type=int
+good2[0] = 1
+good2[1] = 2
+good2[2] = 3
+// DECL good3  type=int
+good3[0] = 1
+good3[1] = 2
+good3[2] = 3

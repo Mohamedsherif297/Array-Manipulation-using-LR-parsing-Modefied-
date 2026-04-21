@@ -1,94 +1,74 @@
 {
   "type": "FunctionDef",
-  "dataType": "int",
   "children": [
     {
       "type": "DATATYPE",
-      "value": "int",
-      "dataType": "int"
+      "value": "int"
     },
     {
       "type": "ID",
-      "value": "main",
-      "dataType": "int"
+      "value": "main"
     },
     {
       "type": "StmtList",
       "children": [
         {
           "type": "Declaration",
-          "dataType": "int",
-          "semanticInfo": "declared_here",
           "children": [
             {
               "type": "DATATYPE",
-              "value": "int",
-              "dataType": "int"
+              "value": "int"
             },
             {
               "type": "ID",
-              "value": "bad1",
-              "dataType": "int"
+              "value": "bad1"
             },
             {
               "type": "InferredSize",
-              "value": "0",
-              "dataType": "int"
+              "value": "0"
             }
           ]
         },
         {
           "type": "Declaration",
-          "dataType": "float",
-          "semanticInfo": "declared_here",
           "children": [
             {
               "type": "DATATYPE",
-              "value": "float",
-              "dataType": "float"
+              "value": "float"
             },
             {
               "type": "ID",
-              "value": "bad2",
-              "dataType": "float"
+              "value": "bad2"
             },
             {
               "type": "InferredSize",
-              "value": "0",
-              "dataType": "int"
+              "value": "0"
             }
           ]
         },
         {
           "type": "Declaration",
-          "dataType": "string",
-          "semanticInfo": "declared_here",
           "children": [
             {
               "type": "DATATYPE",
-              "value": "string",
-              "dataType": "string"
+              "value": "string"
             },
             {
               "type": "ID",
-              "value": "bad3",
-              "dataType": "string"
+              "value": "bad3"
             },
             {
               "type": "InferredSize",
-              "value": "0",
-              "dataType": "int"
+              "value": "0"
             }
           ]
         },
         {
           "type": "Return",
-          "dataType": "int",
           "children": [
             {
               "type": "Number",
-              "value": "0",
-              "dataType": "int"
+              "value": 0
             }
           ]
         }

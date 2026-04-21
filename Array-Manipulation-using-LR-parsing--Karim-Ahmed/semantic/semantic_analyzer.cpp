@@ -195,12 +195,19 @@ void SemanticAnalyzer::visitDecl(shared_ptr<ASTNode> node) {
     if (node->children.size() >= 3 && 
         (node->children[2]->type == "Dimensions" || 
          node->children[2]->type == "ArraySize" ||
+         node->children[2]->type == "InferredSize" ||
          node->children[2]->type == "Number")) {
         auto& dims = node->children[2];
         sym.isArray = true;
         
+        // Check for invalid empty brackets without initializer
+        if (dims->type == "InferredSize") {
+            addError("Array '" + varName + "' declared with empty brackets [] must have an initializer", *dims);
+            sym.size1 = 0;
+            sym.size2 = 0;
+        }
         // Handle different dimension node types
-        if (dims->type == "ArraySize" || dims->type == "Number") {
+        else if (dims->type == "ArraySize" || dims->type == "Number") {
             // Single dimension stored in value
             sym.size1 = stoi(dims->value);
             sym.size2 = 0;
