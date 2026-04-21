@@ -1,22 +1,6 @@
 {
-  "face": {
-    "type": "int",
+  "karim": {
+    "type": "string",
     "isArray": false
-  },
-  "z": {
-    "type": "int",
-    "isArray": true,
-    "size1": 4,
-    "size2": 0
-  },
-  "y": {
-    "type": "int",
-    "isArray": false
-  },
-  "x": {
-    "type": "int",
-    "isArray": true,
-    "size1": 2,
-    "size2": 2
   }
 }

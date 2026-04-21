@@ -57,6 +57,8 @@ public:
                 if (word == "int" || word == "float" || word == "double" || word == "char" || word == "string") {
                     tokens.push_back(Token(TokenType::DATATYPE, word, currentLine));
                     last_type = word; // Update last declared type
+                } else if (word == "return") {
+                    tokens.push_back(Token(TokenType::RESERVED, word, currentLine));
                 } else {
                     st.addSymbol(word, last_type);
                     
@@ -92,12 +94,29 @@ public:
                 case ')': tokens.push_back(Token(TokenType::RPAREN, ")", currentLine)); break;
                 case ';': case ',':
                     tokens.push_back(Token(TokenType::SYMBOL, string(1, c), currentLine)); break;
-                case '\"': // String logic refactored
+                case '\"': // String literal
                     {
                         string str;
                         while (i < n && src[i] != '\"') str += src[i++];
                         i++; // skip closing "
                         tokens.push_back(Token(TokenType::STRING, str, currentLine));
+                    } break;
+                case '\'': // Char literal
+                    {
+                        string ch;
+                        if (i < n && src[i] != '\'') {
+                            ch += src[i++];
+                            if (i < n && src[i] == '\'') {
+                                i++; // skip closing '
+                                tokens.push_back(Token(TokenType::CHAR, ch, currentLine));
+                            } else {
+                                cerr << "Lexical Error: Unterminated character literal at line " << currentLine << endl;
+                                exit(1);
+                            }
+                        } else {
+                            cerr << "Lexical Error: Empty character literal at line " << currentLine << endl;
+                            exit(1);
+                        }
                     } break;
                 default:
                     cerr << "Lexical Error: Invalid character '" << c << "' at line " << currentLine << endl;

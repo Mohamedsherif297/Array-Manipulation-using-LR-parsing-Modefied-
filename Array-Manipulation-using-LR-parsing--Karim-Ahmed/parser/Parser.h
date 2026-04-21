@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <tuple>
 #include "Parsing_Table.cpp"
 
 using namespace std;
@@ -20,7 +21,7 @@ struct Node {
     vector<Node*> children;
 };
 
-Node* parse(vector<pair<string,string>> input) {
+Node* parse(vector<tuple<string,string,int>> input) {
 
     stack<int> stateStack;
     stack<Node*> nodeStack;
@@ -31,12 +32,16 @@ Node* parse(vector<pair<string,string>> input) {
     while (true) {
 
         int state = stateStack.top();
-        string token = input[index].first;
-        string value = input[index].second;
+        string token = get<0>(input[index]);
+        string value = get<1>(input[index]);
+        int lineNum = get<2>(input[index]);
 
         if (!ACTION.count({state, token})) {
 
-            cout << "\n--- SYNTAX ERROR ---\n";
+            cout << "\n========================================\n";
+            cout << "  ❌ SYNTAX ERROR DETECTED\n";
+            cout << "========================================\n";
+            cout << "Error at line " << lineNum << "\n";
             cout << "Unexpected token: " << token
                  << " (value: " << value << ")\n";
             cout << "At input index: " << index << "\n";
@@ -48,7 +53,7 @@ Node* parse(vector<pair<string,string>> input) {
                 }
             }
 
-            cout << "\n--------------------\n";
+            cout << "\n========================================\n";
             return nullptr;
         }
 
@@ -90,9 +95,20 @@ Node* parse(vector<pair<string,string>> input) {
                 newNode = children[0];
             }
 
+            // ================= FUNCTION DEFINITION =================
+            else if (p.lhs == "FunctionDef") {
+                // Type ID ( ) { StmtList }
+                Node* node = new Node();
+                node->type = "FunctionDef";
+                node->children.push_back(children[0]); // return type
+                node->children.push_back(children[1]); // function name
+                node->children.push_back(children[5]); // body (StmtList)
+                newNode = node;
+            }
+
             else if (p.lhs == "StmtList") {
                 Node* node = new Node();
-                node->type = "Program";
+                node->type = "StmtList";
 
                 if (children.size() == 2) {
                     node->children = children[0]->children;
@@ -112,7 +128,14 @@ Node* parse(vector<pair<string,string>> input) {
             else if (p.lhs == "DeclStmt") {
                 Node* node = new Node();
                 node->type = "Declaration";
-                node->children = {children[0], children[1]};
+                node->children.push_back(children[0]); // Type
+                node->children.push_back(children[1]); // ID
+                
+                // Check if there are array dimensions (Type ID ArrayDims ;)
+                if (children.size() == 4) {
+                    node->children.push_back(children[2]); // ArrayDims
+                }
+                
                 newNode = node;
             }
 
@@ -121,6 +144,18 @@ Node* parse(vector<pair<string,string>> input) {
                 Node* node = new Node();
                 node->type = "Assignment";
                 node->children = {children[0], children[2]};
+                newNode = node;
+            }
+
+            // ================= RETURN =================
+            else if (p.lhs == "ReturnStmt") {
+                Node* node = new Node();
+                node->type = "Return";
+                if (children.size() == 3) {
+                    // return Expr ;
+                    node->children.push_back(children[1]); // expression
+                }
+                // else: return ; (no expression)
                 newNode = node;
             }
 
@@ -167,6 +202,7 @@ Node* parse(vector<pair<string,string>> input) {
             // ================= ARRAY DIMS =================
             else if (p.lhs == "ArrayDims") {
                 if (children.size() == 4) {
+                    // Multi-dimensional: ArrayDims [ NUM ]
                     Node* prev = children[0];
 
                     if (prev->type != "Dimensions") {
@@ -187,10 +223,23 @@ Node* parse(vector<pair<string,string>> input) {
 
                     prev->children.push_back(newDim);
                     newNode = prev;
-                } else {
+                } else if (children.size() == 3) {
+                    // Single dimension with size: [ NUM ]
                     Node* node = new Node();
                     node->type = "Number";
                     node->value = children[1]->value;
+                    newNode = node;
+                } else if (children.size() == 2) {
+                    // Empty brackets (inferred size): [ ]
+                    Node* node = new Node();
+                    node->type = "InferredSize";
+                    node->value = "0";  // Placeholder, will be inferred from initializer
+                    newNode = node;
+                } else {
+                    // Fallback for unexpected cases
+                    Node* node = new Node();
+                    node->type = "ArrayDims";
+                    node->children = children;
                     newNode = node;
                 }
             }
@@ -238,10 +287,9 @@ Node* parse(vector<pair<string,string>> input) {
             else if (p.lhs == "Expr" || p.lhs == "Term") {
                 if (children.size() == 3) {
                     Node* node = new Node();
-                    node->type = "BinaryOp";
-                    node->op = children[1]->value.empty() ? children[1]->type : children[1]->value;
-                    node->left = children[0];
-                    node->right = children[2];
+                    node->type = children[1]->value.empty() ? children[1]->type : children[1]->value;
+                    node->children.push_back(children[0]); // left operand
+                    node->children.push_back(children[2]); // right operand
                     newNode = node;
                 } else {
                     newNode = children[0];
@@ -278,7 +326,13 @@ Node* parse(vector<pair<string,string>> input) {
             int currentState = stateStack.top();
 
             if (!GOTO_TABLE.count({currentState, p.lhs})) {
-                cout << "Goto Error\n";
+                cout << "\n========================================\n";
+                cout << "  ❌ SYNTAX ERROR (GOTO)\n";
+                cout << "========================================\n";
+                cout << "Parser internal error: Missing GOTO entry\n";
+                cout << "State: " << currentState << ", Symbol: " << p.lhs << "\n";
+                cout << "This indicates a grammar or parsing table issue.\n";
+                cout << "========================================\n";
                 return nullptr;
             }
 

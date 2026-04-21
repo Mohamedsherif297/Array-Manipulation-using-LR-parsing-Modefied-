@@ -43,6 +43,7 @@ private:
     // Statement visitors
     // -----------------------------------------------------------------------
     void genProgram    (shared_ptr<ASTNode> node);
+    void genFunctionDef(shared_ptr<ASTNode> node);
     void genStatement  (shared_ptr<ASTNode> node);
     void genDecl       (shared_ptr<ASTNode> node);
     void genDeclAssign (shared_ptr<ASTNode> node);

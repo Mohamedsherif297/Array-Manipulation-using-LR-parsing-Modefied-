@@ -124,15 +124,34 @@ void CodeGenerator::genProgram(shared_ptr<ASTNode> node) {
         genStatement(child);
 }
 
+void CodeGenerator::genFunctionDef(shared_ptr<ASTNode> node) {
+    // FunctionDef has: children[0] = return type, children[1] = name, children[2] = body
+    if (node->children.size() < 3) return;
+    
+    // For now, just process the function body (StmtList)
+    auto& body = node->children[2];
+    if (body->type == "StmtList") {
+        for (auto& stmt : body->children) {
+            genStatement(stmt);
+        }
+    }
+}
+
 void CodeGenerator::genStatement(shared_ptr<ASTNode> node) {
     if (!node) return;
 
     const string& t = node->type;
 
+    if (t == "FunctionDef")  { genFunctionDef(node); return; }
     if (t == "Declaration")  { genDecl(node);       return; }
     if (t == "DeclAssign")   { genDeclAssign(node);  return; }
     if (t == "Assignment")   { genAssign(node);      return; }
     if (t == "Program")      { genProgram(node);     return; }
+    if (t == "StmtList")     {
+        for (auto& child : node->children)
+            genStatement(child);
+        return;
+    }
 
     // Transparent wrapper — recurse into children
     for (auto& child : node->children)
@@ -180,6 +199,7 @@ void CodeGenerator::genDeclAssign(shared_ptr<ASTNode> node) {
     bool hasArrayDims = (node->children.size() >= 4 &&
                          (node->children[2]->type == "Dimensions" || 
                           node->children[2]->type == "ArraySize" ||
+                          node->children[2]->type == "InferredSize" ||
                           node->children[2]->type == "Number"));  // Handle parser issue
 
     if (hasArrayDims) {
@@ -281,23 +301,19 @@ void CodeGenerator::genAssign(shared_ptr<ASTNode> node) {
         string tOff;
 
         if (indices.size() == 1) {
-            // 1-D:  offset = index * elemSize
-            tOff = newTemp();
-            emit("*", indices[0], to_string(elemSize), tOff);   // tOff = idx * elemSize
-            emit("STORE", arrName, tOff, rhs);                   // arrName[tOff] = rhs
+            // 1-D:  offset = index (no multiplication by element size)
+            tOff = indices[0];  // Direct index, no byte offset calculation
+            emit("STORE", arrName, tOff, rhs);                   // arrName[index] = rhs
 
         } else if (indices.size() == 2) {
-            // 2-D:  offset = (i * size2 + j) * elemSize
+            // 2-D:  offset = i * size2 + j (no multiplication by element size)
             string tRow  = newTemp();
             emit("*", indices[0], to_string(sym.size2), tRow);   // tRow = i * size2
 
-            string tFlat = newTemp();
-            emit("+", tRow, indices[1], tFlat);                   // tFlat = tRow + j
-
             tOff = newTemp();
-            emit("*", tFlat, to_string(elemSize), tOff);          // tOff = tFlat * elemSize
+            emit("+", tRow, indices[1], tOff);                   // tOff = tRow + j
 
-            emit("STORE", arrName, tOff, rhs);                    // arrName[tOff] = rhs
+            emit("STORE", arrName, tOff, rhs);                   // arrName[tOff] = rhs
 
         } else {
             error("Array assignment with " + to_string(indices.size()) + " dimensions not supported.");
@@ -340,8 +356,8 @@ string CodeGenerator::genExpr(shared_ptr<ASTNode> node) {
         return "";
     }
 
-    // ---- ArraySize and ArrayInit are not expressions, skip them ----
-    if (t == "ArraySize" || t == "ArrayInit" || t == "Dimensions") {
+    // ---- ArraySize, ArrayInit, Dimensions, and InferredSize are not expressions, skip them ----
+    if (t == "ArraySize" || t == "ArrayInit" || t == "Dimensions" || t == "InferredSize") {
         return "";
     }
 
@@ -444,19 +460,15 @@ string CodeGenerator::genArrayAccess(shared_ptr<ASTNode> node) {
     string tOff;
 
     if (indices.size() == 1) {
-        // 1-D access:  offset = index * elemSize
-        tOff = newTemp();
-        emit("*", indices[0], to_string(elemSize), tOff);
+        // 1-D access:  offset = index (no multiplication by element size)
+        tOff = indices[0];  // Direct index, no byte offset calculation
     } else if (indices.size() == 2) {
-        // 2-D access:  offset = (i * size2 + j) * elemSize
+        // 2-D access:  offset = i * size2 + j (no multiplication by element size)
         string tRow  = newTemp();
         emit("*", indices[0], to_string(sym.size2), tRow);    // tRow = i * size2
 
-        string tFlat = newTemp();
-        emit("+", tRow, indices[1], tFlat);                    // tFlat = tRow + j
-
         tOff = newTemp();
-        emit("*", tFlat, to_string(elemSize), tOff);           // tOff = tFlat * elemSize
+        emit("+", tRow, indices[1], tOff);                    // tOff = tRow + j
     } else {
         error("Array access with " + to_string(indices.size()) + " dimensions not supported.");
         return "";
@@ -533,9 +545,7 @@ void CodeGenerator::genArrayInit(shared_ptr<ASTNode> idNode,
                     // Expression - generate code
                     string val = genExpr(child);
                     if (!val.empty()) {
-                        string tOff = newTemp();
-                        emit("*", to_string(flatIndex), to_string(elemSize), tOff);
-                        emit("STORE", arrName, tOff, val);
+                        emit("STORE", arrName, to_string(flatIndex), val);  // Direct index, no byte offset
                         ++flatIndex;
                     }
                 }
@@ -568,9 +578,7 @@ void CodeGenerator::genArrayInit(shared_ptr<ASTNode> idNode,
                 // Otherwise treat as expression
                 string val = genExpr(elemNode);
                 if (!val.empty()) {
-                    string tOff = newTemp();
-                    emit("*", to_string(flatIndex), to_string(elemSize), tOff);
-                    emit("STORE", arrName, tOff, val);
+                    emit("STORE", arrName, to_string(flatIndex), val);  // Direct index, no byte offset
                     ++flatIndex;
                 }
             }
@@ -582,9 +590,7 @@ void CodeGenerator::genArrayInit(shared_ptr<ASTNode> idNode,
             for (auto& elemNode : node->children) {
                 string val = genExpr(elemNode);
                 if (!val.empty()) {
-                    string tOff = newTemp();
-                    emit("*", to_string(flatIndex), to_string(elemSize), tOff);
-                    emit("STORE", arrName, tOff, val);
+                    emit("STORE", arrName, to_string(flatIndex), val);  // Direct index, no byte offset
                     ++flatIndex;
                 }
             }
@@ -602,9 +608,7 @@ void CodeGenerator::genArrayInit(shared_ptr<ASTNode> idNode,
         // If it's a direct expression, generate code
         string val = genExpr(node);
         if (!val.empty()) {
-            string tOff = newTemp();
-            emit("*", to_string(flatIndex), to_string(elemSize), tOff);
-            emit("STORE", arrName, tOff, val);
+            emit("STORE", arrName, to_string(flatIndex), val);  // Direct index, no byte offset
             ++flatIndex;
         }
     };

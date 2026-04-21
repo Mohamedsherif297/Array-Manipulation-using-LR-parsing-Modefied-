@@ -16,7 +16,9 @@ inline vector <Production> grammar = {
 
 {"S'", {"Program"}},
 
-{"Program", {"StmtList"}},
+{"Program", {"FunctionDef"}},
+
+{"FunctionDef", {"Type", "ID", "(", ")", "{", "StmtList", "}"}},
 
 {"StmtList", {"StmtList", "Stmt"}},
 
@@ -27,6 +29,8 @@ inline vector <Production> grammar = {
 {"Stmt", {"AssignStmt"}},
 
 {"Stmt", {"DeclAssignStmt"}},
+
+{"Stmt", {"ReturnStmt"}},
 
 {"DeclStmt", {"Type", "ID", ";"}},
 
@@ -39,6 +43,10 @@ inline vector <Production> grammar = {
 {"DeclAssignStmt", {"Type", "ID", "=", "Expr", ";"}},
 
 {"DeclAssignStmt", {"Type", "ID", "ArrayDims", "=", "ArrayLiteral", ";"}},
+
+{"ReturnStmt", {"return", "Expr", ";"}},
+
+{"ReturnStmt", {"return", ";"}},
 
 // ===== ARRAY LITERAL (UPDATED) =====
 {"ArrayLiteral", {"{", "Elements", "}"}}, 
@@ -58,6 +66,7 @@ inline vector <Production> grammar = {
 
 {"ArrayDims", {"ArrayDims", "[", "NUM", "]"}},
 {"ArrayDims", {"[", "NUM", "]"}},
+{"ArrayDims", {"[", "]"}},
 
 {"Expr", {"Expr", "+", "Term"}},
 {"Expr", {"Expr", "-", "Term"}},
@@ -92,15 +101,15 @@ inline set<string> terminals = {
 
 "[","]","{","}",",",
 
-"(",")","$"
+"(",")","return","$"
 
 };
 
 inline set<string> nonTerminals = {
 
-"S'","Program","StmtList","Stmt",
+"S'","Program","FunctionDef","StmtList","Stmt",
 
-"DeclStmt","AssignStmt","DeclAssignStmt",
+"DeclStmt","AssignStmt","DeclAssignStmt","ReturnStmt",
 
 "ArrayLiteral","Elements","Element",
 

@@ -1,0 +1,44 @@
+{
+  "type": "Program",
+  "children": [
+    {
+      "type": "Declaration",
+      "children": [
+        {
+          "type": "DATATYPE",
+          "value": "int"
+        },
+        {
+          "type": "ID",
+          "value": "x"
+        }
+      ]
+    },
+    {
+      "type": "DeclAssign",
+      "children": [
+        {
+          "type": "DATATYPE",
+          "value": "int"
+        },
+        {
+          "type": "ID",
+          "value": "y"
+        },
+        {
+          "type": "ArrayAccess",
+          "children": [
+            {
+              "type": "ID",
+              "value": "x"
+            },
+            {
+              "type": "Number",
+              "value": 64
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
