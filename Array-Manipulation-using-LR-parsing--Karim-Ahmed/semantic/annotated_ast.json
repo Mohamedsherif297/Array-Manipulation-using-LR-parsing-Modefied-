@@ -16,7 +16,7 @@
       "type": "StmtList",
       "children": [
         {
-          "type": "Declaration",
+          "type": "DeclAssign",
           "dataType": "int",
           "semanticInfo": "declared_here",
           "children": [
@@ -27,56 +27,360 @@
             },
             {
               "type": "ID",
-              "value": "bad1",
+              "value": "x",
+              "dataType": "int"
+            },
+            {
+              "type": "Number",
+              "value": "4",
+              "dataType": "int"
+            },
+            {
+              "type": "ArrayInit",
+              "dataType": "int",
+              "children": [
+                {
+                  "type": "Number",
+                  "value": "1",
+                  "dataType": "int"
+                },
+                {
+                  "type": "Number",
+                  "value": "2",
+                  "dataType": "int"
+                },
+                {
+                  "type": "Number",
+                  "value": "3",
+                  "dataType": "int"
+                },
+                {
+                  "type": "Number",
+                  "value": "4",
+                  "dataType": "int"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "DeclAssign",
+          "dataType": "int",
+          "semanticInfo": "declared_here",
+          "children": [
+            {
+              "type": "DATATYPE",
+              "value": "int",
+              "dataType": "int"
+            },
+            {
+              "type": "ID",
+              "value": "y",
+              "dataType": "int"
+            },
+            {
+              "type": "Dimensions",
+              "dataType": "int",
+              "children": [
+                {
+                  "type": "Number",
+                  "value": "2",
+                  "dataType": "int"
+                },
+                {
+                  "type": "Number",
+                  "value": "3",
+                  "dataType": "int"
+                }
+              ]
+            },
+            {
+              "type": "ArrayInit",
+              "dataType": "int",
+              "children": [
+                {
+                  "type": "ArrayInit",
+                  "dataType": "int",
+                  "children": [
+                    {
+                      "type": "Number",
+                      "value": "1",
+                      "dataType": "int"
+                    },
+                    {
+                      "type": "Number",
+                      "value": "2",
+                      "dataType": "int"
+                    },
+                    {
+                      "type": "Number",
+                      "value": "3",
+                      "dataType": "int"
+                    }
+                  ]
+                },
+                {
+                  "type": "ArrayInit",
+                  "dataType": "int",
+                  "children": [
+                    {
+                      "type": "Number",
+                      "value": "4",
+                      "dataType": "int"
+                    },
+                    {
+                      "type": "Number",
+                      "value": "5",
+                      "dataType": "int"
+                    },
+                    {
+                      "type": "Number",
+                      "value": "6",
+                      "dataType": "int"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "DeclAssign",
+          "dataType": "int",
+          "semanticInfo": "declared_here",
+          "children": [
+            {
+              "type": "DATATYPE",
+              "value": "int",
+              "dataType": "int"
+            },
+            {
+              "type": "ID",
+              "value": "u",
               "dataType": "int"
             },
             {
               "type": "InferredSize",
-              "value": "0",
+              "value": "4",
+              "dataType": "int"
+            },
+            {
+              "type": "ArrayInit",
+              "dataType": "int",
+              "children": [
+                {
+                  "type": "Number",
+                  "value": "10",
+                  "dataType": "int"
+                },
+                {
+                  "type": "Number",
+                  "value": "20",
+                  "dataType": "int"
+                },
+                {
+                  "type": "Number",
+                  "value": "30",
+                  "dataType": "int"
+                },
+                {
+                  "type": "Number",
+                  "value": "40",
+                  "dataType": "int"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "DeclAssign",
+          "dataType": "char",
+          "semanticInfo": "declared_here",
+          "children": [
+            {
+              "type": "DATATYPE",
+              "value": "char",
+              "dataType": "char"
+            },
+            {
+              "type": "ID",
+              "value": "c",
+              "dataType": "char"
+            },
+            {
+              "type": "CHAR",
+              "value": "A",
+              "dataType": "char"
+            }
+          ]
+        },
+        {
+          "type": "DeclAssign",
+          "dataType": "int",
+          "semanticInfo": "declared_here",
+          "children": [
+            {
+              "type": "DATATYPE",
+              "value": "int",
+              "dataType": "int"
+            },
+            {
+              "type": "ID",
+              "value": "a",
+              "dataType": "int"
+            },
+            {
+              "type": "ArrayAccess",
+              "dataType": "int",
+              "semanticInfo": "array_access",
+              "children": [
+                {
+                  "type": "ID",
+                  "value": "x"
+                },
+                {
+                  "type": "Number",
+                  "value": "0",
+                  "dataType": "int"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "DeclAssign",
+          "dataType": "int",
+          "semanticInfo": "declared_here",
+          "children": [
+            {
+              "type": "DATATYPE",
+              "value": "int",
+              "dataType": "int"
+            },
+            {
+              "type": "ID",
+              "value": "b",
+              "dataType": "int"
+            },
+            {
+              "type": "ArrayAccess",
+              "dataType": "int",
+              "semanticInfo": "array_access",
+              "children": [
+                {
+                  "type": "ArrayAccess",
+                  "children": [
+                    {
+                      "type": "ID",
+                      "value": "y"
+                    },
+                    {
+                      "type": "Number",
+                      "value": "1"
+                    }
+                  ]
+                },
+                {
+                  "type": "Number",
+                  "value": "2",
+                  "dataType": "int"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "DeclAssign",
+          "dataType": "int",
+          "semanticInfo": "declared_here",
+          "children": [
+            {
+              "type": "DATATYPE",
+              "value": "int",
+              "dataType": "int"
+            },
+            {
+              "type": "ID",
+              "value": "d",
+              "dataType": "int"
+            },
+            {
+              "type": "ArrayAccess",
+              "dataType": "int",
+              "semanticInfo": "array_access",
+              "children": [
+                {
+                  "type": "ID",
+                  "value": "u"
+                },
+                {
+                  "type": "Number",
+                  "value": "2",
+                  "dataType": "int"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Assignment",
+          "dataType": "int",
+          "children": [
+            {
+              "type": "ArrayAccess",
+              "dataType": "int",
+              "semanticInfo": "array_access",
+              "children": [
+                {
+                  "type": "ID",
+                  "value": "x"
+                },
+                {
+                  "type": "Number",
+                  "value": "1",
+                  "dataType": "int"
+                }
+              ]
+            },
+            {
+              "type": "Number",
+              "value": "99",
               "dataType": "int"
             }
           ]
         },
         {
-          "type": "Declaration",
-          "dataType": "float",
-          "semanticInfo": "declared_here",
+          "type": "Assignment",
+          "dataType": "int",
           "children": [
             {
-              "type": "DATATYPE",
-              "value": "float",
-              "dataType": "float"
+              "type": "ArrayAccess",
+              "dataType": "int",
+              "semanticInfo": "array_access",
+              "children": [
+                {
+                  "type": "ArrayAccess",
+                  "children": [
+                    {
+                      "type": "ID",
+                      "value": "y"
+                    },
+                    {
+                      "type": "Number",
+                      "value": "0"
+                    }
+                  ]
+                },
+                {
+                  "type": "Number",
+                  "value": "1",
+                  "dataType": "int"
+                }
+              ]
             },
             {
-              "type": "ID",
-              "value": "bad2",
-              "dataType": "float"
-            },
-            {
-              "type": "InferredSize",
-              "value": "0",
-              "dataType": "int"
-            }
-          ]
-        },
-        {
-          "type": "Declaration",
-          "dataType": "string",
-          "semanticInfo": "declared_here",
-          "children": [
-            {
-              "type": "DATATYPE",
-              "value": "string",
-              "dataType": "string"
-            },
-            {
-              "type": "ID",
-              "value": "bad3",
-              "dataType": "string"
-            },
-            {
-              "type": "InferredSize",
-              "value": "0",
+              "type": "Number",
+              "value": "88",
               "dataType": "int"
             }
           ]

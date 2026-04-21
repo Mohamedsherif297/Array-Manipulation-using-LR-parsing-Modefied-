@@ -1,20 +1,36 @@
 {
-  "bad3": {
-    "type": "string",
-    "isArray": true,
-    "size1": 0,
-    "size2": 0
+  "b": {
+    "type": "int",
+    "isArray": false
   },
-  "bad2": {
-    "type": "float",
-    "isArray": true,
-    "size1": 0,
-    "size2": 0
+  "d": {
+    "type": "int",
+    "isArray": false
   },
-  "bad1": {
+  "a": {
+    "type": "int",
+    "isArray": false
+  },
+  "c": {
+    "type": "char",
+    "isArray": false
+  },
+  "u": {
     "type": "int",
     "isArray": true,
-    "size1": 0,
+    "size1": 4,
+    "size2": 0
+  },
+  "y": {
+    "type": "int",
+    "isArray": true,
+    "size1": 2,
+    "size2": 3
+  },
+  "x": {
+    "type": "int",
+    "isArray": true,
+    "size1": 4,
     "size2": 0
   }
 }

@@ -13,7 +13,7 @@
       "type": "StmtList",
       "children": [
         {
-          "type": "Declaration",
+          "type": "DeclAssign",
           "children": [
             {
               "type": "DATATYPE",
@@ -21,45 +21,292 @@
             },
             {
               "type": "ID",
-              "value": "bad1"
+              "value": "x"
             },
             {
-              "type": "InferredSize",
-              "value": "0"
+              "type": "Number",
+              "value": 4
+            },
+            {
+              "type": "ArrayInit",
+              "children": [
+                {
+                  "type": "Number",
+                  "value": 1
+                },
+                {
+                  "type": "Number",
+                  "value": 2
+                },
+                {
+                  "type": "Number",
+                  "value": 3
+                },
+                {
+                  "type": "Number",
+                  "value": 4
+                }
+              ]
             }
           ]
         },
         {
-          "type": "Declaration",
+          "type": "DeclAssign",
           "children": [
             {
               "type": "DATATYPE",
-              "value": "float"
+              "value": "int"
             },
             {
               "type": "ID",
-              "value": "bad2"
+              "value": "y"
             },
             {
-              "type": "InferredSize",
-              "value": "0"
+              "type": "Dimensions",
+              "children": [
+                {
+                  "type": "Number",
+                  "value": 2
+                },
+                {
+                  "type": "Number",
+                  "value": 3
+                }
+              ]
+            },
+            {
+              "type": "ArrayInit",
+              "children": [
+                {
+                  "type": "ArrayInit",
+                  "children": [
+                    {
+                      "type": "Number",
+                      "value": 1
+                    },
+                    {
+                      "type": "Number",
+                      "value": 2
+                    },
+                    {
+                      "type": "Number",
+                      "value": 3
+                    }
+                  ]
+                },
+                {
+                  "type": "ArrayInit",
+                  "children": [
+                    {
+                      "type": "Number",
+                      "value": 4
+                    },
+                    {
+                      "type": "Number",
+                      "value": 5
+                    },
+                    {
+                      "type": "Number",
+                      "value": 6
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
         {
-          "type": "Declaration",
+          "type": "DeclAssign",
           "children": [
             {
               "type": "DATATYPE",
-              "value": "string"
+              "value": "int"
             },
             {
               "type": "ID",
-              "value": "bad3"
+              "value": "u"
             },
             {
               "type": "InferredSize",
               "value": "0"
+            },
+            {
+              "type": "ArrayInit",
+              "children": [
+                {
+                  "type": "Number",
+                  "value": 10
+                },
+                {
+                  "type": "Number",
+                  "value": 20
+                },
+                {
+                  "type": "Number",
+                  "value": 30
+                },
+                {
+                  "type": "Number",
+                  "value": 40
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "DeclAssign",
+          "children": [
+            {
+              "type": "DATATYPE",
+              "value": "char"
+            },
+            {
+              "type": "ID",
+              "value": "c"
+            },
+            {
+              "type": "CHAR",
+              "value": "A"
+            }
+          ]
+        },
+        {
+          "type": "DeclAssign",
+          "children": [
+            {
+              "type": "DATATYPE",
+              "value": "int"
+            },
+            {
+              "type": "ID",
+              "value": "a"
+            },
+            {
+              "type": "ArrayAccess",
+              "children": [
+                {
+                  "type": "ID",
+                  "value": "x"
+                },
+                {
+                  "type": "Number",
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "DeclAssign",
+          "children": [
+            {
+              "type": "DATATYPE",
+              "value": "int"
+            },
+            {
+              "type": "ID",
+              "value": "b"
+            },
+            {
+              "type": "ArrayAccess",
+              "children": [
+                {
+                  "type": "ArrayAccess",
+                  "children": [
+                    {
+                      "type": "ID",
+                      "value": "y"
+                    },
+                    {
+                      "type": "Number",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "type": "Number",
+                  "value": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "DeclAssign",
+          "children": [
+            {
+              "type": "DATATYPE",
+              "value": "int"
+            },
+            {
+              "type": "ID",
+              "value": "d"
+            },
+            {
+              "type": "ArrayAccess",
+              "children": [
+                {
+                  "type": "ID",
+                  "value": "u"
+                },
+                {
+                  "type": "Number",
+                  "value": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Assignment",
+          "children": [
+            {
+              "type": "ArrayAccess",
+              "children": [
+                {
+                  "type": "ID",
+                  "value": "x"
+                },
+                {
+                  "type": "Number",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "type": "Number",
+              "value": 99
+            }
+          ]
+        },
+        {
+          "type": "Assignment",
+          "children": [
+            {
+              "type": "ArrayAccess",
+              "children": [
+                {
+                  "type": "ArrayAccess",
+                  "children": [
+                    {
+                      "type": "ID",
+                      "value": "y"
+                    },
+                    {
+                      "type": "Number",
+                      "value": 0
+                    }
+                  ]
+                },
+                {
+                  "type": "Number",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "type": "Number",
+              "value": 88
             }
           ]
         },

@@ -173,9 +173,27 @@ void CodeGenerator::genDecl(shared_ptr<ASTNode> node) {
                              ? node->children[0]->type
                              : node->children[0]->value;
 
-    // Emit a DECL annotation so the IR is self-documenting.
-    // No executable code is needed for a bare declaration.
-    emit("DECL", typeName, "", varName);
+    // Look up symbol to get array metadata
+    auto it = symTable_.find(varName);
+    if (it != symTable_.end()) {
+        const CGSymbol& sym = it->second;
+        
+        // Emit a DECL annotation with full metadata
+        if (sym.isArray) {
+            string arrayInfo = typeName;
+            if (sym.size2 > 0) {
+                arrayInfo += " array[" + to_string(sym.size1) + "][" + to_string(sym.size2) + "]";
+            } else {
+                arrayInfo += " array[" + to_string(sym.size1) + "]";
+            }
+            emit("DECL", arrayInfo, "", varName);
+        } else {
+            emit("DECL", typeName, "", varName);
+        }
+    } else {
+        // Symbol not found in table, emit basic DECL
+        emit("DECL", typeName, "", varName);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -194,34 +212,52 @@ void CodeGenerator::genDeclAssign(shared_ptr<ASTNode> node) {
                              ? node->children[0]->type
                              : node->children[0]->value;
 
-    emit("DECL", typeName, "", varName);
-
     bool hasArrayDims = (node->children.size() >= 4 &&
                          (node->children[2]->type == "Dimensions" || 
                           node->children[2]->type == "ArraySize" ||
                           node->children[2]->type == "InferredSize" ||
                           node->children[2]->type == "Number"));  // Handle parser issue
 
+    // Look up symbol to get array metadata
+    auto it = symTable_.find(varName);
+    
     if (hasArrayDims) {
         // Array declaration with literal initialiser
         auto& arrNode = node->children[3]; // "Array" or "ArrayInit" node
 
-        // Look up symbol to get dimension sizes
-        auto it = symTable_.find(varName);
-        if (it == symTable_.end()) {
-            // Symbol not found - use default element size
+        if (it != symTable_.end()) {
+            const CGSymbol& sym = it->second;
+            
+            // Emit DECL with full array metadata
+            string arrayInfo = typeName;
+            if (sym.size2 > 0) {
+                arrayInfo += " array[" + to_string(sym.size1) + "][" + to_string(sym.size2) + "]";
+            } else {
+                arrayInfo += " array[" + to_string(sym.size1) + "]";
+            }
+            emit("DECL", arrayInfo, "", varName);
+            
+            genArrayInit(node->children[1], arrNode, sym);
+        } else {
+            // Symbol not found - use default
+            emit("DECL", typeName, "", varName);
+            
             CGSymbol defaultSym;
             defaultSym.name = varName;
             defaultSym.type = typeName;
             defaultSym.isArray = true;
-            defaultSym.size1 = 0;  // Will be determined by initializer
+            defaultSym.size1 = 0;
             defaultSym.size2 = 0;
             genArrayInit(node->children[1], arrNode, defaultSym);
-        } else {
-            genArrayInit(node->children[1], arrNode, it->second);
         }
     } else {
         // Scalar declaration with expression initialiser
+        if (it != symTable_.end()) {
+            emit("DECL", typeName, "", varName);
+        } else {
+            emit("DECL", typeName, "", varName);
+        }
+        
         string rhs = genExpr(node->children[2]);
         if (!rhs.empty()) {
             emit("ASSIGN", rhs, "", varName);
@@ -255,6 +291,7 @@ void CodeGenerator::genAssign(shared_ptr<ASTNode> node) {
 
         // Collect all indices by traversing the recursive ArrayAccess structure
         vector<string> indices;
+        vector<shared_ptr<ASTNode>> indexNodes;  // Keep nodes for bounds checking
         shared_ptr<ASTNode> current = lhsNode;
         string arrName;
 
@@ -266,6 +303,7 @@ void CodeGenerator::genAssign(shared_ptr<ASTNode> node) {
             }
             
             // The last child is always the index for this level
+            indexNodes.push_back(current->children.back());
             indices.push_back(genExpr(current->children.back()));
             
             // Move to the next level (children[0])
@@ -289,6 +327,7 @@ void CodeGenerator::genAssign(shared_ptr<ASTNode> node) {
 
         // Reverse indices because we collected them from innermost to outermost
         reverse(indices.begin(), indices.end());
+        reverse(indexNodes.begin(), indexNodes.end());
 
         auto it = symTable_.find(arrName);
         if (it == symTable_.end()) {
@@ -296,17 +335,40 @@ void CodeGenerator::genAssign(shared_ptr<ASTNode> node) {
             return;
         }
         const CGSymbol& sym = it->second;
-        int elemSize = sym.elementSize();
+
+        // Bounds checking for constant indices
+        for (size_t i = 0; i < indexNodes.size(); ++i) {
+            auto& idxNode = indexNodes[i];
+            if (idxNode->type == "NUM" || idxNode->type == "Number") {
+                try {
+                    int constIndex = stoi(idxNode->value);
+                    int bound = (i == 0) ? sym.size1 : sym.size2;
+                    
+                    if (constIndex < 0) {
+                        error("Array index cannot be negative: " + arrName + 
+                              "[" + to_string(constIndex) + "]");
+                    } else if (constIndex >= bound) {
+                        error("Array index out of bounds: " + arrName + 
+                              "[" + to_string(constIndex) + "] (size is " + 
+                              to_string(bound) + ")");
+                    }
+                } catch (...) {
+                    // Not a valid integer, skip bounds check
+                }
+            }
+        }
 
         string tOff;
 
         if (indices.size() == 1) {
-            // 1-D:  offset = index (no multiplication by element size)
-            tOff = indices[0];  // Direct index, no byte offset calculation
+            // 1-D: Always compute offset explicitly
+            // offset = index
+            tOff = indices[0];
             emit("STORE", arrName, tOff, rhs);                   // arrName[index] = rhs
 
         } else if (indices.size() == 2) {
-            // 2-D:  offset = i * size2 + j (no multiplication by element size)
+            // 2-D: Always compute offset explicitly
+            // offset = i * num_cols + j
             string tRow  = newTemp();
             emit("*", indices[0], to_string(sym.size2), tRow);   // tRow = i * size2
 
@@ -336,8 +398,19 @@ string CodeGenerator::genExpr(shared_ptr<ASTNode> node) {
     // ---- Literals ----
     if (t == "NUM")    return node->value;
     if (t == "Number") return node->value;  // Handle "Number" node type
+    
+    // STANDARDIZED CHAR AND STRING HANDLING:
+    // - CHAR: represented as ASCII integer value (e.g., 'A' → 65)
+    // - STRING: represented as quoted string literal (e.g., "hello")
     if (t == "STRING") return "\"" + node->value + "\"";
-    if (t == "CHAR")   return "'" + node->value + "'";
+    if (t == "CHAR") {
+        // Convert char to ASCII integer for consistent internal representation
+        if (!node->value.empty()) {
+            int asciiValue = static_cast<int>(node->value[0]);
+            return to_string(asciiValue);
+        }
+        return "0";  // Default for empty char
+    }
 
     // ---- Variable reference ----
     if (t == "ID") return node->value;
@@ -401,8 +474,11 @@ string CodeGenerator::genBinaryOp(shared_ptr<ASTNode> node) {
 //   For x[0]:     children[0] = ID(x), children[1] = Expr(0)
 //   For x[0][0]:  children[0] = ArrayAccess(x[0]), children[1] = Expr(0)
 //
-// We need to recursively process nested ArrayAccess nodes and accumulate
-// the offset calculation for multi-dimensional arrays.
+// UNIFIED APPROACH:
+// - Always compute index explicitly for ALL arrays (1D and 2D)
+// - For 1D: offset = index
+// - For 2D: offset = i * num_cols + j
+// - Add bounds checking for constant indices
 // ---------------------------------------------------------------------------
 
 string CodeGenerator::genArrayAccess(shared_ptr<ASTNode> node) {
@@ -413,6 +489,7 @@ string CodeGenerator::genArrayAccess(shared_ptr<ASTNode> node) {
 
     // Collect all indices by traversing the recursive ArrayAccess structure
     vector<string> indices;
+    vector<shared_ptr<ASTNode>> indexNodes;  // Keep nodes for bounds checking
     shared_ptr<ASTNode> current = node;
     string arrName;
 
@@ -424,6 +501,7 @@ string CodeGenerator::genArrayAccess(shared_ptr<ASTNode> node) {
         }
         
         // The last child is always the index for this level
+        indexNodes.push_back(current->children.back());
         indices.push_back(genExpr(current->children.back()));
         
         // Move to the next level (children[0])
@@ -447,6 +525,7 @@ string CodeGenerator::genArrayAccess(shared_ptr<ASTNode> node) {
 
     // Reverse indices because we collected them from innermost to outermost
     reverse(indices.begin(), indices.end());
+    reverse(indexNodes.begin(), indexNodes.end());
 
     // Look up symbol
     auto it = symTable_.find(arrName);
@@ -455,15 +534,38 @@ string CodeGenerator::genArrayAccess(shared_ptr<ASTNode> node) {
         return "";
     }
     const CGSymbol& sym = it->second;
-    int elemSize = sym.elementSize();
+
+    // Bounds checking for constant indices
+    for (size_t i = 0; i < indexNodes.size(); ++i) {
+        auto& idxNode = indexNodes[i];
+        if (idxNode->type == "NUM" || idxNode->type == "Number") {
+            try {
+                int constIndex = stoi(idxNode->value);
+                int bound = (i == 0) ? sym.size1 : sym.size2;
+                
+                if (constIndex < 0) {
+                    error("Array index cannot be negative: " + arrName + 
+                          "[" + to_string(constIndex) + "]");
+                } else if (constIndex >= bound) {
+                    error("Array index out of bounds: " + arrName + 
+                          "[" + to_string(constIndex) + "] (size is " + 
+                          to_string(bound) + ")");
+                }
+            } catch (...) {
+                // Not a valid integer, skip bounds check
+            }
+        }
+    }
 
     string tOff;
 
     if (indices.size() == 1) {
-        // 1-D access:  offset = index (no multiplication by element size)
-        tOff = indices[0];  // Direct index, no byte offset calculation
+        // 1-D access: Always compute offset explicitly
+        // offset = index
+        tOff = indices[0];
     } else if (indices.size() == 2) {
-        // 2-D access:  offset = i * size2 + j (no multiplication by element size)
+        // 2-D access: Always compute offset explicitly
+        // offset = i * num_cols + j
         string tRow  = newTemp();
         emit("*", indices[0], to_string(sym.size2), tRow);    // tRow = i * size2
 
