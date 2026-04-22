@@ -84,6 +84,16 @@
   color: var(--text-primary);
 }
 
+.icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.icon-btn:disabled:hover {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
 /* ============================================
    EDITOR CONTENT
    ============================================ */

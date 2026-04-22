@@ -8,11 +8,14 @@ interface ProblemsPanelProps {
   height: number
   onHeightChange: (height: number) => void
   onErrorClick: (line: number) => void
+  consoleOutput: string
+  consoleInput: string
+  onConsoleInputChange: (value: string) => void
 }
 
 type ProblemTab = 'problems' | 'warnings' | 'output' | 'console'
 
-function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick }: ProblemsPanelProps) {
+function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick, consoleOutput, consoleInput, onConsoleInputChange }: ProblemsPanelProps) {
   const [activeTab, setActiveTab] = useState<ProblemTab>('problems')
   const [isResizing, setIsResizing] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -227,13 +230,25 @@ function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick 
 
           {activeTab === 'output' && (
             <div className="console-output">
-              <div className="console-line">Compiler output will appear here...</div>
+              {consoleOutput ? (
+                consoleOutput.split('\n').filter(Boolean).map((line, index) => (
+                  <div key={index} className="console-line">{line}</div>
+                ))
+              ) : (
+                <div className="console-line">No runtime output yet.</div>
+              )}
             </div>
           )}
 
           {activeTab === 'console' && (
             <div className="console-output">
-              <div className="console-line">Console logs will appear here...</div>
+              <div className="console-line">Provide stdin values for cin (space/newline separated), then Compile.</div>
+              <textarea
+                className="console-input-area"
+                value={consoleInput}
+                onChange={(e) => onConsoleInputChange(e.target.value)}
+                placeholder="Example: 5 9 Karim"
+              />
             </div>
           )}
         </div>

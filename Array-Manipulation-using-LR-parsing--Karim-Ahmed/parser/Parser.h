@@ -74,7 +74,15 @@ Node* parse(vector<tuple<string,string,int>> input) {
             cout << "Error at line " << errorLine << "\n";
             
             if (expectingSemicolon) {
-                cout << "Missing semicolon ';'\n";
+                // If we are still on the same line and got another token,
+                // that token is usually the real issue (e.g. "Karim"s).
+                if (lineNum == errorLine && token != ";" && token != "$") {
+                    cout << "Unexpected token after expression: " << value
+                         << " (token: " << token << ")\n";
+                    cout << "Expected ';' before this token\n";
+                } else {
+                    cout << "Missing semicolon ';'\n";
+                }
             } else {
                 cout << "Unexpected token: " << token
                      << " (value: " << value << ")\n";
@@ -199,6 +207,64 @@ Node* parse(vector<tuple<string,string,int>> input) {
                 }
                 // else: return ; (no expression)
                 newNode = node;
+            }
+
+            // ================= I/O (cout / cin) =================
+            else if (p.lhs == "IoStmt") {
+                Node* node = new Node();
+                node->lineNumber = getLineFromChildren(children);
+
+                if (!children.empty() && children[0]->value == "cout") {
+                    node->type = "Output";
+                    if (children.size() >= 2) {
+                        node->children = children[1]->children;
+                    }
+                } else {
+                    node->type = "Input";
+                    if (children.size() >= 2) {
+                        node->children = children[1]->children;
+                    }
+                }
+
+                newNode = node;
+            }
+
+            else if (p.lhs == "CoutList") {
+                Node* node = new Node();
+                node->type = "CoutList";
+                node->lineNumber = getLineFromChildren(children);
+
+                if (children.size() == 3) {
+                    // CoutList << Expr
+                    node->children = children[0]->children;
+                    node->children.push_back(children[2]);
+                } else {
+                    // << Expr
+                    node->children.push_back(children[1]);
+                }
+
+                newNode = node;
+            }
+
+            else if (p.lhs == "CinList") {
+                Node* node = new Node();
+                node->type = "CinList";
+                node->lineNumber = getLineFromChildren(children);
+
+                if (children.size() == 3) {
+                    // CinList >> InputTarget
+                    node->children = children[0]->children;
+                    node->children.push_back(children[2]);
+                } else {
+                    // >> InputTarget
+                    node->children.push_back(children[1]);
+                }
+
+                newNode = node;
+            }
+
+            else if (p.lhs == "InputTarget") {
+                newNode = children[0];
             }
 
             // ================= DECL + ASSIGN =================

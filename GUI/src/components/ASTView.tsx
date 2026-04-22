@@ -94,7 +94,7 @@ function ASTView({ ast }: ASTViewProps) {
     ids.add(nodeId)
     
     if (node.children && Array.isArray(node.children)) {
-      node.children.forEach((child: any, index: number) => {
+      node.children.forEach((child: any) => {
         collectAllNodeIds(child, level + 1, ids)
       })
     }
@@ -130,7 +130,11 @@ function ASTView({ ast }: ASTViewProps) {
 
   const handleExpandAll = () => {
     if (expandAll) {
-      setExpanded(new Set())
+      // Keep only the root expanded so users still see top-level headers.
+      const rootOnly = new Set<string>()
+      const rootId = `${ast.type}-0-${JSON.stringify(ast.value || '')}`
+      rootOnly.add(rootId)
+      setExpanded(rootOnly)
       setExpandAll(false)
     } else {
       const allIds = new Set<string>()

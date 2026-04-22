@@ -84,6 +84,12 @@ void CodeGenerator::printIR(ostream& out) const {
             out << "// DECL " << q.result;
             if (!q.arg1.empty()) out << "  type=" << q.arg1;
             out << "\n";
+        } else if (q.op == "PRINT") {
+            // PRINT value
+            out << "PRINT " << q.arg1 << "\n";
+        } else if (q.op == "READ") {
+            // READ target
+            out << "READ " << q.result << "\n";
         } else if (q.arg2.empty()) {
             // Unary:  result = op arg1
             out << q.result << " = " << q.op << " " << q.arg1 << "\n";
@@ -146,6 +152,8 @@ void CodeGenerator::genStatement(shared_ptr<ASTNode> node) {
     if (t == "Declaration")  { genDecl(node);       return; }
     if (t == "DeclAssign")   { genDeclAssign(node);  return; }
     if (t == "Assignment")   { genAssign(node);      return; }
+    if (t == "Output")       { genOutput(node);      return; }
+    if (t == "Input")        { genInput(node);       return; }
     if (t == "Program")      { genProgram(node);     return; }
     if (t == "StmtList")     {
         for (auto& child : node->children)
@@ -156,6 +164,40 @@ void CodeGenerator::genStatement(shared_ptr<ASTNode> node) {
     // Transparent wrapper — recurse into children
     for (auto& child : node->children)
         genStatement(child);
+}
+
+void CodeGenerator::genOutput(shared_ptr<ASTNode> node) {
+    // cout << expr << expr ...
+    for (auto& child : node->children) {
+        const string value = genExpr(child);
+        if (!value.empty()) {
+            emit("PRINT", value, "", "");
+        }
+    }
+}
+
+void CodeGenerator::genInput(shared_ptr<ASTNode> node) {
+    // cin >> target >> target ...
+    for (auto& child : node->children) {
+        if (child->type == "ID") {
+            emit("READ", "", "", child->value);
+        } else if (child->type == "ArrayAccess") {
+            // Reuse assignment path by reading to a temp then storing into target.
+            string tIn = newTemp();
+            emit("READ", "", "", tIn);
+
+            auto fakeAssign = make_shared<ASTNode>();
+            fakeAssign->type = "Assignment";
+            fakeAssign->children.push_back(child);
+
+            auto rhsTemp = make_shared<ASTNode>();
+            rhsTemp->type = "ID";
+            rhsTemp->value = tIn;
+            fakeAssign->children.push_back(rhsTemp);
+
+            genAssign(fakeAssign);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

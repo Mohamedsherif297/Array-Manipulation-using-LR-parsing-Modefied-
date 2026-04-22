@@ -54,43 +54,38 @@
 
 /* Light Mode Theme - High Contrast, Clear Colors */
 [data-theme="light"] {
-  /* Base Colors - Light Mode with Better Contrast */
-  --bg-primary: #fafafa;
-  --bg-secondary: #eeeeee;
-  --bg-tertiary: #e0e0e0;
-  --bg-hover: #d6d6d6;
+  /* User-requested high-contrast dark palette (applied when light toggle is enabled) */
+  --bg-primary: #0b0f1a;
+  --bg-secondary: #141a2a;
+  --bg-tertiary: #1b2235;
+  --bg-hover: #25304a;
 
-  /* Text Colors - High Contrast */
-  --text-primary: #000000;
-  --text-secondary: #424242;
-  --text-tertiary: #757575;
-  --text-inverse: #ffffff;
+  --text-primary: #f3f4f6;
+  --text-secondary: #c4c8d0;
+  --text-tertiary: #9aa3b2;
+  --text-inverse: #101828;
 
-  /* Syntax Highlighting - Vibrant, Clear Colors */
-  --syntax-keyword: #d73a49;    /* Bright Red - keywords */
-  --syntax-type: #005cc5;       /* Bright Blue - types */
-  --syntax-function: #6f42c1;   /* Purple - functions */
-  --syntax-variable: #24292e;   /* Almost Black - variables */
-  --syntax-string: #032f62;     /* Dark Blue - strings */
-  --syntax-number: #005cc5;     /* Blue - numbers */
-  --syntax-comment: #6a737d;    /* Gray - comments */
-  --syntax-operator: #d73a49;   /* Red - operators */
+  --syntax-keyword: #d8a6ff;
+  --syntax-type: #56d4c0;
+  --syntax-function: #f6e58d;
+  --syntax-variable: #9ed0ff;
+  --syntax-string: #ffb089;
+  --syntax-number: #b9e8a1;
+  --syntax-comment: #78ad72;
+  --syntax-operator: #e5e7eb;
 
-  /* Borders & Shadows - Clear Separation */
-  --border-default: #c0c0c0;
+  --border-default: #2e3b56;
   --border-focus: #3b82f6;
-  --shadow-sm: rgba(0, 0, 0, 0.1);
-  --shadow-md: rgba(0, 0, 0, 0.15);
-  --shadow-lg: rgba(0, 0, 0, 0.25);
+  --shadow-sm: rgba(0, 0, 0, 0.25);
+  --shadow-md: rgba(0, 0, 0, 0.35);
+  --shadow-lg: rgba(0, 0, 0, 0.5);
 
-  /* TAC Specific - High Contrast */
-  --tac-temp: #d73a49;          /* Red for temps */
-  --tac-label: #6f42c1;         /* Purple for labels */
-  --tac-instruction: #005cc5;   /* Blue for instructions */
-  --tac-constant: #22863a;      /* Green for constants */
+  --tac-temp: #e2a8ff;
+  --tac-label: #ffd580;
+  --tac-instruction: #7cc4ff;
+  --tac-constant: #7edb9b;
 
-  /* Status Colors - Adjusted for Light Mode */
-  --status-idle: #757575;
+  --status-idle: #94a3b8;
   --status-running: #2563eb;
   --status-success: #059669;
   --status-error: #dc2626;

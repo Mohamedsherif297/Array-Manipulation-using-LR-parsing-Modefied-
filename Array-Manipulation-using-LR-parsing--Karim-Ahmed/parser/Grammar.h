@@ -32,6 +32,8 @@ inline vector <Production> grammar = {
 
 {"Stmt", {"ReturnStmt"}},
 
+{"Stmt", {"IoStmt"}},
+
 {"DeclStmt", {"Type", "ID", ";"}},
 
 {"DeclStmt", {"Type", "ID", "ArrayDims", ";"}},
@@ -47,6 +49,18 @@ inline vector <Production> grammar = {
 {"ReturnStmt", {"return", "Expr", ";"}},
 
 {"ReturnStmt", {"return", ";"}},
+
+{"IoStmt", {"cout", "CoutList", ";"}},
+{"IoStmt", {"cin", "CinList", ";"}},
+
+{"CoutList", {"CoutList", "<<", "Expr"}},
+{"CoutList", {"<<", "Expr"}},
+
+{"CinList", {"CinList", ">>", "InputTarget"}},
+{"CinList", {">>", "InputTarget"}},
+
+{"InputTarget", {"ID"}},
+{"InputTarget", {"ArrayAccess"}},
 
 // ===== ARRAY LITERAL (UPDATED) =====
 {"ArrayLiteral", {"{", "Elements", "}"}}, 
@@ -99,9 +113,11 @@ inline set<string> terminals = {
 
 "+","-","*","/","=",";",
 
+"<<",">>",
+
 "[","]","{","}",",",
 
-"(",")","return","$"
+"(",")","return","cout","cin","$"
 
 };
 
@@ -110,6 +126,8 @@ inline set<string> nonTerminals = {
 "S'","Program","FunctionDef","StmtList","Stmt",
 
 "DeclStmt","AssignStmt","DeclAssignStmt","ReturnStmt",
+
+"IoStmt","CoutList","CinList","InputTarget",
 
 "ArrayLiteral","Elements","Element",
 

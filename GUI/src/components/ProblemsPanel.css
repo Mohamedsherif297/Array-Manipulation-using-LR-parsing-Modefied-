@@ -276,6 +276,25 @@
   padding: 4px 0;
 }
 
+.console-input-area {
+  width: 100%;
+  min-height: 90px;
+  margin-top: 10px;
+  padding: 10px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+}
+
+.console-input-area:focus {
+  border-color: var(--border-focus);
+}
+
 /* ============================================
    RESPONSIVE
    ============================================ */

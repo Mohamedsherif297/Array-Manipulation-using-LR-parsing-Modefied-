@@ -8,9 +8,13 @@ interface EditorPanelProps {
   highlightedLine: number | null
   errors?: CompilerError[]
   onLineClick: (line: number) => void
+  canUndo: boolean
+  canRedo: boolean
+  onUndo: () => void
+  onRedo: () => void
 }
 
-function EditorPanel({ code, onChange, highlightedLine, errors, onLineClick }: EditorPanelProps) {
+function EditorPanel({ code, onChange, highlightedLine, errors, onLineClick, canUndo, canRedo, onUndo, onRedo }: EditorPanelProps) {
   const [cursorPosition, setCursorPosition] = useState({ line: 1, col: 1 })
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   
@@ -31,6 +35,22 @@ function EditorPanel({ code, onChange, highlightedLine, errors, onLineClick }: E
 
   // Handle key down for auto-completion and tab indentation
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      e.preventDefault()
+      if (e.shiftKey) {
+        onRedo()
+      } else {
+        onUndo()
+      }
+      return
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+      e.preventDefault()
+      onRedo()
+      return
+    }
+
     const textarea = e.currentTarget
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
@@ -219,6 +239,24 @@ function EditorPanel({ code, onChange, highlightedLine, errors, onLineClick }: E
             <span className="tab-icon">📝</span>
             <span className="tab-label">main.c</span>
           </div>
+        </div>
+        <div className="editor-actions">
+          <button
+            className="icon-btn"
+            onClick={onUndo}
+            disabled={!canUndo}
+            title="Undo (Ctrl+Z)"
+          >
+            ↶
+          </button>
+          <button
+            className="icon-btn"
+            onClick={onRedo}
+            disabled={!canRedo}
+            title="Redo (Ctrl+Y)"
+          >
+            ↷
+          </button>
         </div>
       </div>
 

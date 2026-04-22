@@ -16,6 +16,8 @@ export interface CompilerOutput {
   symbolTable?: any
   tac?: string
   optimizedTac?: string
+  consoleOutput?: string
+  runtimeError?: string | null
   errors?: CompilerError[]
   warnings?: string[]
   success?: boolean
@@ -46,6 +48,32 @@ function App() {
   const [highlightedLine, setHighlightedLine] = useState<number | null>(null)
   const [problemsPanelHeight, setProblemsPanelHeight] = useState(200)
   const [isDarkMode, setIsDarkMode] = useState(true)
+  const [consoleInput, setConsoleInput] = useState('')
+  const [undoStack, setUndoStack] = useState<string[]>([])
+  const [redoStack, setRedoStack] = useState<string[]>([])
+
+  const handleCodeChange = (nextCode: string) => {
+    if (nextCode === code) return
+    setUndoStack(prev => [...prev, code])
+    setRedoStack([])
+    setCode(nextCode)
+  }
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) return
+    const previous = undoStack[undoStack.length - 1]
+    setUndoStack(prev => prev.slice(0, -1))
+    setRedoStack(prev => [...prev, code])
+    setCode(previous)
+  }
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) return
+    const next = redoStack[redoStack.length - 1]
+    setRedoStack(prev => prev.slice(0, -1))
+    setUndoStack(prev => [...prev, code])
+    setCode(next)
+  }
 
   const handleThemeToggle = () => {
     setIsDarkMode(!isDarkMode)
@@ -71,7 +99,7 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, stdin: consoleInput }),
       })
 
       const result = await response.json()
@@ -136,10 +164,14 @@ function App() {
       <div className="main-workspace">
         <EditorPanel 
           code={code}
-          onChange={setCode}
+          onChange={handleCodeChange}
           highlightedLine={highlightedLine}
           errors={output?.errors}
           onLineClick={setHighlightedLine}
+          canUndo={undoStack.length > 0}
+          canRedo={redoStack.length > 0}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
         />
         
         <OutputPanel 
@@ -156,6 +188,9 @@ function App() {
         height={problemsPanelHeight}
         onHeightChange={setProblemsPanelHeight}
         onErrorClick={handleErrorClick}
+        consoleOutput={output?.consoleOutput || ''}
+        consoleInput={consoleInput}
+        onConsoleInputChange={setConsoleInput}
       />
     </div>
   )

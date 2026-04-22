@@ -1,12 +1,10 @@
 import express from 'express'
 import cors from 'cors'
-import { exec, spawn } from 'child_process'
-import { promisify } from 'util'
+import { spawn } from 'child_process'
 import fs from 'fs/promises'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-const execAsync = promisify(exec)
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -25,8 +23,267 @@ const TEMP_DIR = path.join(__dirname, 'temp')
 // Ensure temp directory exists
 await fs.mkdir(TEMP_DIR, { recursive: true })
 
+function defaultValueForType(type) {
+  switch (type) {
+    case 'char': return ''
+    case 'string': return ''
+    case 'int':
+    case 'float':
+    case 'double':
+    default: return 0
+  }
+}
+
+function castValueToType(value, type) {
+  switch (type) {
+    case 'char': {
+      if (typeof value === 'number') return String.fromCharCode(value)
+      const s = String(value ?? '')
+      return s.length > 0 ? s[0] : ''
+    }
+    case 'string':
+      return String(value ?? '')
+    case 'float':
+    case 'double':
+    case 'int': {
+      const n = Number(value)
+      return Number.isFinite(n) ? n : 0
+    }
+    default:
+      return value
+  }
+}
+
+function buildInitialRuntimeState(symbolTable) {
+  const env = {}
+  if (!symbolTable || typeof symbolTable !== 'object') return env
+
+  for (const [name, sym] of Object.entries(symbolTable)) {
+    const type = sym?.type || 'int'
+    if (sym?.isArray) {
+      const size1 = Number(sym.size1 || 0)
+      const size2 = Number(sym.size2 || 0)
+      if (size2 > 0) {
+        env[name] = Array.from({ length: size1 }, () =>
+          Array.from({ length: size2 }, () => defaultValueForType(type))
+        )
+      } else {
+        env[name] = Array.from({ length: size1 }, () => defaultValueForType(type))
+      }
+    } else {
+      env[name] = defaultValueForType(type)
+    }
+  }
+
+  return env
+}
+
+function collectArrayAccessInfo(node) {
+  const indices = []
+  let current = node
+
+  while (current && current.type === 'ArrayAccess') {
+    if (!current.children || current.children.length < 2) break
+    indices.push(current.children[1])
+    current = current.children[0]
+  }
+
+  if (!current || current.type !== 'ID') return null
+  indices.reverse()
+  return { baseName: current.value, indexNodes: indices }
+}
+
+function runProgram(ast, symbolTable, stdinText = '') {
+  const env = buildInitialRuntimeState(symbolTable)
+  const inputTokens = String(stdinText || '').split(/\s+/).filter(Boolean)
+  let inputPos = 0
+  let output = ''
+  const runtimeWarnings = []
+
+  const getSymbolType = (name) => symbolTable?.[name]?.type || 'int'
+
+  const evalExpr = (node) => {
+    if (!node) return 0
+    const t = node.type
+
+    if (t === 'NUM' || t === 'Number') {
+      return Number(node.value)
+    }
+    if (t === 'STRING') return String(node.value ?? '')
+    if (t === 'CHAR') return String(node.value ?? '').slice(0, 1)
+    if (t === 'ID') return env[node.value]
+
+    if (t === 'ArrayAccess') {
+      const info = collectArrayAccessInfo(node)
+      if (!info) return 0
+      const base = env[info.baseName]
+      const indices = info.indexNodes.map((n) => Number(evalExpr(n)))
+
+      if (typeof base === 'string') {
+        const idx = indices[0] ?? 0
+        return idx >= 0 && idx < base.length ? base[idx] : ''
+      }
+
+      if (!Array.isArray(base)) return 0
+      if (indices.length === 1) return base[indices[0]]
+      if (indices.length >= 2 && Array.isArray(base[indices[0]])) return base[indices[0]][indices[1]]
+      return 0
+    }
+
+    if (t === '+' || t === '-' || t === '*' || t === '/') {
+      const l = evalExpr(node.children?.[0])
+      const r = evalExpr(node.children?.[1])
+      if (t === '+') return l + r
+      if (t === '-') return Number(l) - Number(r)
+      if (t === '*') return Number(l) * Number(r)
+      if (t === '/') return Number(r) === 0 ? 0 : Number(l) / Number(r)
+    }
+
+    if (Array.isArray(node.children) && node.children.length > 0) {
+      return evalExpr(node.children[node.children.length - 1])
+    }
+
+    return 0
+  }
+
+  const assignTarget = (lhsNode, rhsValue) => {
+    if (!lhsNode) return
+
+    if (lhsNode.type === 'ID') {
+      const name = lhsNode.value
+      env[name] = castValueToType(rhsValue, getSymbolType(name))
+      return
+    }
+
+    if (lhsNode.type !== 'ArrayAccess') return
+
+    const info = collectArrayAccessInfo(lhsNode)
+    if (!info) return
+    const baseName = info.baseName
+    const indices = info.indexNodes.map((n) => Number(evalExpr(n)))
+    const current = env[baseName]
+
+    if (typeof current === 'string') {
+      const idx = indices[0] ?? 0
+      if (idx < 0) return
+
+      const rhsString = String(rhsValue ?? '')
+      // Requested behavior: allow editing string with string value at index.
+      // Example: name[1] = "are";
+      env[baseName] =
+        current.slice(0, idx) +
+        rhsString +
+        current.slice(Math.min(idx + 1, current.length))
+      return
+    }
+
+    if (!Array.isArray(current)) return
+
+    if (indices.length === 1) {
+      current[indices[0]] = castValueToType(rhsValue, getSymbolType(baseName))
+      return
+    }
+
+    if (indices.length >= 2 && Array.isArray(current[indices[0]])) {
+      current[indices[0]][indices[1]] = castValueToType(rhsValue, getSymbolType(baseName))
+    }
+  }
+
+  const readInputForTarget = (targetNode) => {
+    const raw = inputTokens[inputPos++]
+    if (raw == null) {
+      runtimeWarnings.push('cin requested input but no more console input values were provided.')
+      return ''
+    }
+
+    if (targetNode?.type === 'ID') {
+      const type = getSymbolType(targetNode.value)
+      return castValueToType(raw, type)
+    }
+
+    if (targetNode?.type === 'ArrayAccess') {
+      const info = collectArrayAccessInfo(targetNode)
+      if (info) {
+        const type = getSymbolType(info.baseName)
+        return castValueToType(raw, type)
+      }
+    }
+
+    return raw
+  }
+
+  const execute = (node) => {
+    if (!node) return false
+
+    if (node.type === 'Program' || node.type === 'StmtList') {
+      for (const child of node.children || []) {
+        if (execute(child)) return true
+      }
+      return false
+    }
+
+    if (node.type === 'FunctionDef') {
+      const body = node.children?.[2]
+      return execute(body)
+    }
+
+    if (node.type === 'Declaration') {
+      const name = node.children?.[1]?.value
+      if (name && env[name] == null) {
+        env[name] = defaultValueForType(node.children?.[0]?.value)
+      }
+      return false
+    }
+
+    if (node.type === 'DeclAssign') {
+      const lhs = node.children?.[1]
+      const rhs = node.children?.[node.children.length - 1]
+      if (rhs?.type === 'ArrayInit') {
+        // Array initialisation is already reflected in generated assignments; skip in runtime simulator.
+        return false
+      }
+      assignTarget(lhs, evalExpr(rhs))
+      return false
+    }
+
+    if (node.type === 'Assignment') {
+      assignTarget(node.children?.[0], evalExpr(node.children?.[1]))
+      return false
+    }
+
+    if (node.type === 'Output') {
+      let line = ''
+      for (const expr of node.children || []) {
+        const value = evalExpr(expr)
+        line += String(value)
+      }
+      output += line + '\n'
+      return false
+    }
+
+    if (node.type === 'Input') {
+      for (const target of node.children || []) {
+        assignTarget(target, readInputForTarget(target))
+      }
+      return false
+    }
+
+    if (node.type === 'Return') {
+      return true
+    }
+
+    for (const child of node.children || []) {
+      if (execute(child)) return true
+    }
+    return false
+  }
+
+  execute(ast)
+  return { output, warnings: runtimeWarnings }
+}
+
 app.post('/api/compile', async (req, res) => {
-  const { code } = req.body
+  const { code, stdin } = req.body
 
   if (!code || typeof code !== 'string') {
     return res.status(400).json({ 
@@ -329,6 +586,21 @@ app.post('/api/compile', async (req, res) => {
       fs.unlink(irFile).catch(() => {})
     ])
 
+    let consoleOutput = ''
+    let runtimeError = null
+
+    // Optional lightweight runtime simulation for cout/cin.
+    if (errors.length === 0 && phases.codegen && (ast || annotatedAst)) {
+      try {
+        const runtime = runProgram(ast || annotatedAst, symbolTable, stdin)
+        consoleOutput = runtime.output
+        warnings.push(...runtime.warnings)
+      } catch (runtimeErr) {
+        runtimeError = `Runtime simulation failed: ${runtimeErr.message || runtimeErr}`
+        warnings.push(runtimeError)
+      }
+    }
+
     // Determine overall success - only successful if no errors in any phase
     const overallSuccess = errors.length === 0 && phases.codegen
     
@@ -343,7 +615,9 @@ app.post('/api/compile', async (req, res) => {
       warnings,
       ast: ast || annotatedAst,
       symbolTable,
-      tac
+      tac,
+      consoleOutput,
+      runtimeError
     })
 
   } catch (error) {

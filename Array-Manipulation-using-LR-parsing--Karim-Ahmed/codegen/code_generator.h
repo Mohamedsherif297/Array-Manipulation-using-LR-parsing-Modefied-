@@ -48,6 +48,8 @@ private:
     void genDecl       (shared_ptr<ASTNode> node);
     void genDeclAssign (shared_ptr<ASTNode> node);
     void genAssign     (shared_ptr<ASTNode> node);
+    void genOutput     (shared_ptr<ASTNode> node);
+    void genInput      (shared_ptr<ASTNode> node);
 
     // -----------------------------------------------------------------------
     // Expression visitors — return the name of the temporary (or literal /

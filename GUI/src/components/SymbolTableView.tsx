@@ -26,6 +26,32 @@ function SymbolTableView({ symbolTable }: SymbolTableViewProps) {
     symbol.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  const getScalarSize = (type: string): number | null => {
+    switch (type) {
+      case 'char':
+        return 1
+      case 'int':
+      case 'float':
+        return 4
+      case 'double':
+        return 8
+      case 'string':
+        // Runtime/dynamic length, not fixed-size in this compiler view.
+        return null
+      default:
+        return 4
+    }
+  }
+
+  const getSizeDisplay = (symbol: any): string => {
+    const scalarSize = getScalarSize(symbol.type)
+    if (scalarSize == null) return 'dynamic'
+
+    if (symbol.size1 && symbol.size2) return String(symbol.size1 * symbol.size2 * scalarSize)
+    if (symbol.size1) return String(symbol.size1 * scalarSize)
+    return String(scalarSize)
+  }
+
   return (
     <div className="symbol-table-view">
       <div className="symbol-table-toolbar">
@@ -96,11 +122,7 @@ function SymbolTableView({ symbolTable }: SymbolTableViewProps) {
                     </td>
                     <td>
                       <span className="size-value">
-                        {symbol.size1 && symbol.size2
-                          ? symbol.size1 * symbol.size2 * 4
-                          : symbol.size1
-                          ? symbol.size1 * 4
-                          : 4}
+                        {getSizeDisplay(symbol)}
                       </span>
                     </td>
                     <td>
@@ -143,11 +165,7 @@ function SymbolTableView({ symbolTable }: SymbolTableViewProps) {
                   <div className="card-row">
                     <span className="card-label">Size:</span>
                     <span className="card-value">
-                      {symbol.size1 && symbol.size2
-                        ? symbol.size1 * symbol.size2 * 4
-                        : symbol.size1
-                        ? symbol.size1 * 4
-                        : 4}{' '}
+                      {getSizeDisplay(symbol)}{' '}
                       bytes
                     </span>
                   </div>

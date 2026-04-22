@@ -96,10 +96,10 @@ function OutputPanel({
             <div className="error-header">
               <div className="error-icon">❌</div>
               <h3>Compilation Failed</h3>
-              <p>Found {output.errors.length} error{output.errors.length > 1 ? 's' : ''} in your code</p>
+              <p>Found {output.errors?.length || 0} error{(output.errors?.length || 0) > 1 ? 's' : ''} in your code</p>
             </div>
             <div className="error-list">
-              {output.errors.map((error, index) => (
+              {(output.errors || []).map((error, index) => (
                 <div key={index} className="error-item-detailed">
                   <div className="error-item-header">
                     <span className="error-number">Error {index + 1}</span>

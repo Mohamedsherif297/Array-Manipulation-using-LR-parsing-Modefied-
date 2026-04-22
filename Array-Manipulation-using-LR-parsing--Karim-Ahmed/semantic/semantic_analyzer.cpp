@@ -153,6 +153,8 @@ void SemanticAnalyzer::visitStatement(shared_ptr<ASTNode> node) {
     if (node->type == "Declaration")   { visitDecl(node);       return; }
     if (node->type == "DeclAssign")    { visitDeclAssign(node);  return; }
     if (node->type == "Assignment")    { visitAssign(node);      return; }
+    if (node->type == "Output")        { visitOutput(node);      return; }
+    if (node->type == "Input")         { visitInput(node);       return; }
     if (node->type == "Return")        { visitReturn(node);      return; }
     if (node->type == "Program")       { visitProgram(node);     return; }
     if (node->type == "FunctionDef")   { visitFunctionDef(node); return; }
@@ -165,6 +167,37 @@ void SemanticAnalyzer::visitStatement(shared_ptr<ASTNode> node) {
     // Fallback: recurse into children
     for (auto& child : node->children)
         visitStatement(child);
+}
+
+void SemanticAnalyzer::visitOutput(shared_ptr<ASTNode> node) {
+    // cout << expr << expr ...
+    for (auto& child : node->children) {
+        visitExpr(child);
+    }
+    node->dataType = "void";
+}
+
+void SemanticAnalyzer::visitInput(shared_ptr<ASTNode> node) {
+    // cin >> target >> target ...
+    for (auto& child : node->children) {
+        if (child->type == "ID") {
+            const auto* sym = symTable_.lookup(child->value);
+            if (!sym) {
+                addError("Undeclared variable '" + child->value + "'", *child);
+                child->dataType = "unknown";
+            } else if (sym->isArray) {
+                addError("Array '" + child->value + "' used without index", *child);
+                child->dataType = "unknown";
+            } else {
+                child->dataType = sym->type;
+            }
+        } else if (child->type == "ArrayAccess") {
+            visitArrayAccess(child);
+        } else {
+            addError("Invalid input target in cin statement", *child);
+        }
+    }
+    node->dataType = "void";
 }
 
 // ---------------------------------------------------------------------------
@@ -415,6 +448,42 @@ void SemanticAnalyzer::visitAssign(shared_ptr<ASTNode> node) {
     }
 
     string rhsType = visitExpr(rhsNode);
+
+    // Special case: allow editing string via indexing.
+    // Examples:
+    //   string name = "karim";
+    //   name[1] = "are";
+    auto isStringScalarIndexAccess = [&](shared_ptr<ASTNode> accessNode) -> bool {
+        if (!accessNode || accessNode->type != "ArrayAccess") return false;
+
+        auto current = accessNode;
+        while (current && current->type == "ArrayAccess" && !current->children.empty()) {
+            if (current->children[0]->type == "ArrayAccess") {
+                current = current->children[0];
+            } else {
+                break;
+            }
+        }
+
+        if (!current || current->children.empty()) return false;
+        auto base = current->children[0];
+        if (!base || base->type != "ID") return false;
+
+        const SemanticSymbol* sym = symTable_.lookup(base->value);
+        return sym && sym->type == "string" && !sym->isArray;
+    };
+
+    if (lhsNode->type == "ArrayAccess" && isStringScalarIndexAccess(lhsNode)) {
+        if (rhsType == "string" || rhsType == "char") {
+            node->dataType = "string";
+            return;
+        }
+    }
+
+    // Convenience: allow single-character string literal for char assignment.
+    if (lhsType == "char" && rhsNode->type == "STRING" && rhsNode->value.size() == 1) {
+        rhsType = "char";
+    }
     
     if (!isAssignmentCompatible(lhsType, rhsType)) {
         addError("Type mismatch in assignment: cannot assign '" + rhsType +
