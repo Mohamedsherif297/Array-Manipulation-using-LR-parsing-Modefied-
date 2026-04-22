@@ -12,10 +12,11 @@ SemanticAnalyzer::SemanticAnalyzer(SemanticSymbolTable& symTable)
     : symTable_(symTable) {}
 
 void SemanticAnalyzer::addError(const string& msg, const ASTNode& node) {
-    errors_.push_back({msg, node.type, node.value});
+    errors_.push_back({msg, node.type, node.value, node.line});
     cerr << "[Semantic Error] " << msg
          << "  (node=" << node.type;
     if (!node.value.empty()) cerr << ", value=" << node.value;
+    if (node.line > 0) cerr << ", line=" << node.line;
     cerr << ")\n";
 }
 

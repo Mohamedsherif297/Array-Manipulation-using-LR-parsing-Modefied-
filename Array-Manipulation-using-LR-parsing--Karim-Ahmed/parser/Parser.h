@@ -15,6 +15,7 @@ struct Node {
     string value;
     string op;
     string arrayName;
+    int lineNumber = 0;  // Track line number for error reporting
     Node* left = nullptr;
     Node* right = nullptr;
     Node* index = nullptr;
@@ -23,8 +24,19 @@ struct Node {
 
 Node* parse(vector<tuple<string,string,int>> input) {
 
+    // Helper function to get line number from children (use first child's line)
+    auto getLineFromChildren = [](const vector<Node*>& children) -> int {
+        for (auto* child : children) {
+            if (child && child->lineNumber > 0) {
+                return child->lineNumber;
+            }
+        }
+        return 0;
+    };
+
     stack<int> stateStack;
     stack<Node*> nodeStack;
+    int previousLineNum = 1;  // Track previous token's line for better error reporting
 
     stateStack.push(0);
     int index = 0;
@@ -38,13 +50,36 @@ Node* parse(vector<tuple<string,string,int>> input) {
 
         if (!ACTION.count({state, token})) {
 
+            // Determine the actual error line
+            // If we're expecting a semicolon and the current token is on a new line,
+            // the error is likely on the previous line
+            int errorLine = lineNum;
+            bool expectingSemicolon = false;
+            
+            for (auto &entry : ACTION) {
+                if (entry.first.first == state && entry.first.second == ";") {
+                    expectingSemicolon = true;
+                    break;
+                }
+            }
+            
+            // If expecting semicolon and current token is on next line, error is on previous line
+            if (expectingSemicolon && lineNum > previousLineNum) {
+                errorLine = previousLineNum;
+            }
+
             cout << "\n========================================\n";
             cout << "  ❌ SYNTAX ERROR DETECTED\n";
             cout << "========================================\n";
-            cout << "Error at line " << lineNum << "\n";
-            cout << "Unexpected token: " << token
-                 << " (value: " << value << ")\n";
-            cout << "At input index: " << index << "\n";
+            cout << "Error at line " << errorLine << "\n";
+            
+            if (expectingSemicolon) {
+                cout << "Missing semicolon ';'\n";
+            } else {
+                cout << "Unexpected token: " << token
+                     << " (value: " << value << ")\n";
+            }
+            
             cout << "Expected one of: ";
 
             for (auto &entry : ACTION) {
@@ -57,6 +92,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
             return nullptr;
         }
 
+        previousLineNum = lineNum;  // Track this line for next iteration
         string action = ACTION[{state, token}];
 
         // ================= SHIFT =================
@@ -66,6 +102,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
             Node* node = new Node();
             node->type = token;
             node->value = value;
+            node->lineNumber = lineNum;  // Store line number
 
             nodeStack.push(node);
             stateStack.push(nextState);
@@ -100,6 +137,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
                 // Type ID ( ) { StmtList }
                 Node* node = new Node();
                 node->type = "FunctionDef";
+                node->lineNumber = getLineFromChildren(children);
                 node->children.push_back(children[0]); // return type
                 node->children.push_back(children[1]); // function name
                 node->children.push_back(children[5]); // body (StmtList)
@@ -109,6 +147,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
             else if (p.lhs == "StmtList") {
                 Node* node = new Node();
                 node->type = "StmtList";
+                node->lineNumber = getLineFromChildren(children);
 
                 if (children.size() == 2) {
                     node->children = children[0]->children;
@@ -128,6 +167,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
             else if (p.lhs == "DeclStmt") {
                 Node* node = new Node();
                 node->type = "Declaration";
+                node->lineNumber = getLineFromChildren(children);
                 node->children.push_back(children[0]); // Type
                 node->children.push_back(children[1]); // ID
                 
@@ -143,6 +183,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
             else if (p.lhs == "AssignStmt") {
                 Node* node = new Node();
                 node->type = "Assignment";
+                node->lineNumber = getLineFromChildren(children);
                 node->children = {children[0], children[2]};
                 newNode = node;
             }
@@ -151,6 +192,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
             else if (p.lhs == "ReturnStmt") {
                 Node* node = new Node();
                 node->type = "Return";
+                node->lineNumber = getLineFromChildren(children);
                 if (children.size() == 3) {
                     // return Expr ;
                     node->children.push_back(children[1]); // expression
@@ -163,6 +205,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
             else if (p.lhs == "DeclAssignStmt") {
                 Node* node = new Node();
                 node->type = "DeclAssign";
+                node->lineNumber = getLineFromChildren(children);
 
                 node->children.push_back(children[0]); // type
                 node->children.push_back(children[1]); // id
@@ -183,6 +226,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
                         Node* arraySize = new Node();
                         arraySize->type = "ArraySize";
                         arraySize->value = children[3]->value;
+                        arraySize->lineNumber = children[3]->lineNumber;
                         node->children.push_back(arraySize);
                         node->children.push_back(children[6]); // ArrayLiteral after '='
                     } else {
@@ -208,10 +252,12 @@ Node* parse(vector<tuple<string,string,int>> input) {
                     if (prev->type != "Dimensions") {
                         Node* dims = new Node();
                         dims->type = "Dimensions";
+                        dims->lineNumber = prev->lineNumber;
 
                         Node* first = new Node();
                         first->type = "Number";
                         first->value = prev->value;
+                        first->lineNumber = prev->lineNumber;
                         dims->children.push_back(first);
 
                         prev = dims;
@@ -220,6 +266,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
                     Node* newDim = new Node();
                     newDim->type = "Number";
                     newDim->value = children[2]->value;
+                    newDim->lineNumber = children[2]->lineNumber;
 
                     prev->children.push_back(newDim);
                     newNode = prev;
@@ -228,17 +275,20 @@ Node* parse(vector<tuple<string,string,int>> input) {
                     Node* node = new Node();
                     node->type = "Number";
                     node->value = children[1]->value;
+                    node->lineNumber = children[1]->lineNumber;
                     newNode = node;
                 } else if (children.size() == 2) {
                     // Empty brackets (inferred size): [ ]
                     Node* node = new Node();
                     node->type = "InferredSize";
                     node->value = "0";  // Placeholder, will be inferred from initializer
+                    node->lineNumber = getLineFromChildren(children);
                     newNode = node;
                 } else {
                     // Fallback for unexpected cases
                     Node* node = new Node();
                     node->type = "ArrayDims";
+                    node->lineNumber = getLineFromChildren(children);
                     node->children = children;
                     newNode = node;
                 }
@@ -248,6 +298,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
             else if (p.lhs == "ArrayLiteral") {
                 Node* node = new Node();
                 node->type = "ArrayInit";
+                node->lineNumber = getLineFromChildren(children);
 
                 node->children = children[1]->children;
                 newNode = node;
@@ -256,6 +307,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
             else if (p.lhs == "Elements") {
                 Node* node = new Node();
                 node->type = "Elements";
+                node->lineNumber = getLineFromChildren(children);
 
                 if (children.size() == 3) {
                     node->children = children[0]->children;
@@ -275,6 +327,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
             else if (p.lhs == "ArrayAccess") {
                 Node* node = new Node();
                 node->type = "ArrayAccess";
+                node->lineNumber = getLineFromChildren(children);
 
                 // Convert to children format for consistency with AST loader
                 node->children.push_back(children[0]); // ID or nested ArrayAccess
@@ -288,6 +341,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
                 if (children.size() == 3) {
                     Node* node = new Node();
                     node->type = children[1]->value.empty() ? children[1]->type : children[1]->value;
+                    node->lineNumber = getLineFromChildren(children);
                     node->children.push_back(children[0]); // left operand
                     node->children.push_back(children[2]); // right operand
                     newNode = node;
@@ -303,6 +357,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
                     Node* node = new Node();
                     node->type = "Number";
                     node->value = children[0]->value;
+                    node->lineNumber = children[0]->lineNumber;
                     newNode = node;
                 } else {
                     newNode = children[0];
@@ -387,6 +442,12 @@ void printJSON(Node* node, int indent = 0, ostream* outStream = nullptr) {
         } else {
             out << space << "  \"value\": \"" << node->value << "\"";
         }
+    }
+
+    // Add line number to JSON output
+    if (node->lineNumber > 0) {
+        out << ",\n";
+        out << space << "  \"line\": " << node->lineNumber;
     }
 
     if (!node->op.empty()) {

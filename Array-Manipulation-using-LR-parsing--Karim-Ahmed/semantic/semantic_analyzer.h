@@ -13,6 +13,7 @@ struct SemanticError {
     string message;
     string nodeType;   // which AST node triggered it
     string nodeValue;  // value of that node (if any)
+    int line;          // line number where error occurred
 };
 
 class SemanticAnalyzer {

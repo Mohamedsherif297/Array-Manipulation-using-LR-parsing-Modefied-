@@ -1,88 +1,264 @@
+/* ============================================
+   PROFESSIONAL COMPILER IDE - COLOR PALETTE
+   ============================================ */
+
+:root {
+  /* Base Colors - Dark Mode */
+  --bg-primary: #0e1117;
+  --bg-secondary: #1a1d29;
+  --bg-tertiary: #252834;
+  --bg-hover: #2d3142;
+
+  /* Accent Colors */
+  --accent-primary: #3b82f6;
+  --accent-success: #10b981;
+  --accent-warning: #f59e0b;
+  --accent-error: #ef4444;
+  --accent-info: #06b6d4;
+
+  /* Text Colors */
+  --text-primary: #e4e4e7;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #71717a;
+  --text-inverse: #18181b;
+
+  /* Syntax Highlighting - VS Code Dark+ */
+  --syntax-keyword: #c586c0;    /* Purple - keywords (return, if, else) */
+  --syntax-type: #4ec9b0;       /* Teal/Green - types (int, char, string) */
+  --syntax-function: #dcdcaa;   /* Yellow - functions */
+  --syntax-variable: #9cdcfe;   /* Light blue - variables */
+  --syntax-string: #ce9178;     /* Orange - strings */
+  --syntax-number: #b5cea8;     /* Light green - numbers */
+  --syntax-comment: #6a9955;    /* Green - comments */
+  --syntax-operator: #d4d4d4;   /* Light gray - operators */
+
+  /* Borders & Shadows */
+  --border-default: #27272a;
+  --border-focus: #3b82f6;
+  --shadow-sm: rgba(0, 0, 0, 0.2);
+  --shadow-md: rgba(0, 0, 0, 0.3);
+  --shadow-lg: rgba(0, 0, 0, 0.5);
+
+  /* TAC Specific */
+  --tac-temp: #c678dd;
+  --tac-label: #e5c07b;
+  --tac-instruction: #61afef;
+  --tac-constant: #d19a66;
+
+  /* Status Colors */
+  --status-idle: #71717a;
+  --status-running: #3b82f6;
+  --status-success: #10b981;
+  --status-error: #ef4444;
+}
+
+/* Light Mode Theme - High Contrast, Clear Colors */
+[data-theme="light"] {
+  /* Base Colors - Light Mode with Better Contrast */
+  --bg-primary: #fafafa;
+  --bg-secondary: #eeeeee;
+  --bg-tertiary: #e0e0e0;
+  --bg-hover: #d6d6d6;
+
+  /* Text Colors - High Contrast */
+  --text-primary: #000000;
+  --text-secondary: #424242;
+  --text-tertiary: #757575;
+  --text-inverse: #ffffff;
+
+  /* Syntax Highlighting - Vibrant, Clear Colors */
+  --syntax-keyword: #d73a49;    /* Bright Red - keywords */
+  --syntax-type: #005cc5;       /* Bright Blue - types */
+  --syntax-function: #6f42c1;   /* Purple - functions */
+  --syntax-variable: #24292e;   /* Almost Black - variables */
+  --syntax-string: #032f62;     /* Dark Blue - strings */
+  --syntax-number: #005cc5;     /* Blue - numbers */
+  --syntax-comment: #6a737d;    /* Gray - comments */
+  --syntax-operator: #d73a49;   /* Red - operators */
+
+  /* Borders & Shadows - Clear Separation */
+  --border-default: #c0c0c0;
+  --border-focus: #3b82f6;
+  --shadow-sm: rgba(0, 0, 0, 0.1);
+  --shadow-md: rgba(0, 0, 0, 0.15);
+  --shadow-lg: rgba(0, 0, 0, 0.25);
+
+  /* TAC Specific - High Contrast */
+  --tac-temp: #d73a49;          /* Red for temps */
+  --tac-label: #6f42c1;         /* Purple for labels */
+  --tac-instruction: #005cc5;   /* Blue for instructions */
+  --tac-constant: #22863a;      /* Green for constants */
+
+  /* Status Colors - Adjusted for Light Mode */
+  --status-idle: #757575;
+  --status-running: #2563eb;
+  --status-success: #059669;
+  --status-error: #dc2626;
+}
+
+/* ============================================
+   GLOBAL RESET & BASE STYLES
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+code, pre {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+}
+
+/* ============================================
+   APP LAYOUT
+   ============================================ */
+
 .app {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #1e1e1e;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--bg-primary);
 }
 
-.app-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 1.5rem 2rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-}
-
-.app-header h1 {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: white;
-  margin-bottom: 0.3rem;
-}
-
-.app-header p {
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 300;
-}
-
-.app-content {
+.main-workspace {
   display: flex;
   flex: 1;
   overflow: hidden;
+  height: calc(100vh - 60px - 200px);
+  min-height: 400px;
 }
 
-.editor-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid #3e3e42;
-  min-width: 400px;
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
 }
 
-.output-section {
-  flex: 1.5;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.5rem;
-  background: #252526;
-  border-bottom: 1px solid #3e3e42;
-}
-
-.section-header h2 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #cccccc;
-}
-
-.compile-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  padding: 0.6rem 1.5rem;
+::-webkit-scrollbar-thumb {
+  background: var(--bg-hover);
   border-radius: 6px;
-  font-size: 0.95rem;
+  border: 2px solid var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.separator {
+  width: 1px;
+  height: 20px;
+  background: var(--border-default);
+  margin: 0 12px;
+}
+
+.badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  min-width: 20px;
+  text-align: center;
+  display: inline-block;
 }
 
-.compile-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+.badge-primary {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--accent-primary);
 }
 
-.compile-btn:active:not(:disabled) {
-  transform: translateY(0);
+.badge-success {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--accent-success);
 }
 
-.compile-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.badge-warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--accent-warning);
+}
+
+.badge-error {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--accent-error);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================
+   RESPONSIVE BREAKPOINTS
+   ============================================ */
+
+@media (max-width: 1200px) {
+  .main-workspace {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 768px) {
+  .app {
+    font-size: 14px;
+  }
 }

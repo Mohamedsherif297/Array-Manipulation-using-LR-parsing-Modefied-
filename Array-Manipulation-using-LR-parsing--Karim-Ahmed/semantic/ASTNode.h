@@ -11,6 +11,7 @@ using namespace std;
 struct ASTNode {
     string type;                        // e.g. "DeclAssign", "ID", "NUM"
     string value;                       // leaf value, e.g. "x", "2"
+    int line = 0;                       // line number for error reporting
     vector<shared_ptr<ASTNode>> children;
 
     // Semantic annotations (filled during analysis)

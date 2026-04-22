@@ -68,7 +68,11 @@ int main(int argc, char* argv[]) {
         cout << "\n[Semantic Analysis] Completed with "
              << analyzer.errors().size() << " error(s):\n";
         for (auto& err : analyzer.errors()) {
-            cout << "  - " << err.message << "\n";
+            cout << "  - " << err.message;
+            if (err.line > 0) {
+                cout << " (line " << err.line << ")";
+            }
+            cout << "\n";
         }
     } else {
         cout << "[Semantic Analysis] No errors found.\n";

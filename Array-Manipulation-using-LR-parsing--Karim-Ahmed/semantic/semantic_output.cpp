@@ -21,6 +21,10 @@ static void writeNode(shared_ptr<ASTNode> node, int indent, ostream& out) {
         out << ",\n" << sp << "  \"value\": \"" << node->value << "\"";
     }
 
+    if (node->line > 0) {
+        out << ",\n" << sp << "  \"line\": " << node->line;
+    }
+
     if (!node->dataType.empty()) {
         out << ",\n" << sp << "  \"dataType\": \"" << node->dataType << "\"";
     }

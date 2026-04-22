@@ -57,7 +57,7 @@ public:
                 if (word == "int" || word == "float" || word == "double" || word == "char" || word == "string") {
                     tokens.push_back(Token(TokenType::DATATYPE, word, currentLine));
                     last_type = word; // Update last declared type
-                } else if (word == "return") {
+                } else if (word == "return" || word == "cout" || word == "cin") {
                     tokens.push_back(Token(TokenType::RESERVED, word, currentLine));
                 } else {
                     st.addSymbol(word, last_type);
@@ -83,8 +83,21 @@ public:
 
             // Operators & Symbols [cite: 729]
             char c = src[i++];
+            
+            // Check for << and >> operators
+            if (c == '<' && i < n && src[i] == '<') {
+                i++;
+                tokens.push_back(Token(TokenType::OPERATOR, "<<", currentLine));
+                continue;
+            }
+            if (c == '>' && i < n && src[i] == '>') {
+                i++;
+                tokens.push_back(Token(TokenType::OPERATOR, ">>", currentLine));
+                continue;
+            }
+            
             switch (c) {
-                case '+': case '-': case '*': case '/': case '=':
+                case '+': case '-': case '*': case '/': case '=': case '<': case '>':
                     tokens.push_back(Token(TokenType::OPERATOR, string(1, c), currentLine)); break;
                 case '[': tokens.push_back(Token(TokenType::LBRACKET, "[", currentLine)); break;
                 case ']': tokens.push_back(Token(TokenType::RBRACKET, "]", currentLine)); break;

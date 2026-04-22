@@ -103,6 +103,16 @@ static shared_ptr<ASTNode> parseObject(const string& s, size_t& pos) {
             node->type = parseString(s, pos);
         } else if (key == "value") {
             node->value = parseValue(s, pos);
+        } else if (key == "line") {
+            // Parse line number
+            skipWhitespace(s, pos);
+            string lineStr;
+            while (pos < s.size() && isdigit(s[pos])) {
+                lineStr += s[pos++];
+            }
+            if (!lineStr.empty()) {
+                node->line = stoi(lineStr);
+            }
         } else if (key == "children") {
             node->children = parseArray(s, pos);
         } else if (key == "array") {

@@ -3,23 +3,9 @@
     "type": "int",
     "isArray": false
   },
-  "d": {
-    "type": "int",
-    "isArray": false
-  },
   "a": {
     "type": "int",
     "isArray": false
-  },
-  "c": {
-    "type": "char",
-    "isArray": false
-  },
-  "u": {
-    "type": "int",
-    "isArray": true,
-    "size1": 4,
-    "size2": 0
   },
   "y": {
     "type": "int",
