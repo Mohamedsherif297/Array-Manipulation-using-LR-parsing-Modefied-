@@ -257,14 +257,46 @@
           ]
         },
         {
-          "type": "Return",
+          "type": "Input",
           "line": 6,
+          "dataType": "void",
+          "children": [
+            {
+              "type": "ID",
+              "value": "a",
+              "line": 6,
+              "dataType": "int"
+            }
+          ]
+        },
+        {
+          "type": "Output",
+          "line": 7,
+          "dataType": "void",
+          "children": [
+            {
+              "type": "STRING",
+              "value": "hello",
+              "line": 7,
+              "dataType": "string"
+            },
+            {
+              "type": "ID",
+              "value": "endl",
+              "line": 7,
+              "dataType": "unknown"
+            }
+          ]
+        },
+        {
+          "type": "Return",
+          "line": 8,
           "dataType": "int",
           "children": [
             {
               "type": "Number",
               "value": "0",
-              "line": 6,
+              "line": 8,
               "dataType": "int"
             }
           ]

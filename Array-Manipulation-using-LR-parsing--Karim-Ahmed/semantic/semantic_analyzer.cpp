@@ -545,6 +545,11 @@ string SemanticAnalyzer::visitExpr(shared_ptr<ASTNode> node) {
         return "char";
     }
 
+    if (t == "EndLine") {
+        node->dataType = "void";
+        return "void";
+    }
+
     // Leaf: identifier
     if (t == "ID") {
         string varName = node->value;

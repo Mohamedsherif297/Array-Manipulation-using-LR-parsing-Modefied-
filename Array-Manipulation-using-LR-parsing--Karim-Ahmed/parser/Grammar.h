@@ -96,6 +96,8 @@ inline vector <Production> grammar = {
 {"Factor", {"ArrayAccess"}},
 {"Factor", {"STRING"}},
 {"Factor", {"CHAR"}},
+{"Factor", {"endl"}},
+{"Factor", {"endLine"}},
 
 {"Type", {"int"}},
 {"Type", {"float"}},

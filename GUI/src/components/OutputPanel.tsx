@@ -70,8 +70,8 @@ function OutputPanel({
             className={`tab ${activeTab === 'learn' ? 'active' : ''} tab-highlight`}
             onClick={() => onTabChange('learn')}
           >
-            <span className="tab-icon">🎓</span>
-            <span className="tab-label">Learn</span>
+            <span className="tab-icon">🧩</span>
+            <span className="tab-label">Variable Visualizer</span>
           </button>
         </div>
       )}
@@ -140,7 +140,7 @@ function OutputPanel({
               <SymbolTableView symbolTable={output.symbolTable} />
             )}
             {activeTab === 'learn' && (
-              <LearnView phases={output.phases} />
+              <LearnView output={output} />
             )}
           </>
         )}

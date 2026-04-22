@@ -87,6 +87,9 @@ void CodeGenerator::printIR(ostream& out) const {
         } else if (q.op == "PRINT") {
             // PRINT value
             out << "PRINT " << q.arg1 << "\n";
+        } else if (q.op == "PRINTLN") {
+            // Explicit newline output
+            out << "PRINTLN\n";
         } else if (q.op == "READ") {
             // READ target
             out << "READ " << q.result << "\n";
@@ -169,6 +172,10 @@ void CodeGenerator::genStatement(shared_ptr<ASTNode> node) {
 void CodeGenerator::genOutput(shared_ptr<ASTNode> node) {
     // cout << expr << expr ...
     for (auto& child : node->children) {
+        if (child->type == "EndLine") {
+            emit("PRINTLN", "", "", "");
+            continue;
+        }
         const string value = genExpr(child);
         if (!value.empty()) {
             emit("PRINT", value, "", "");
@@ -453,6 +460,8 @@ string CodeGenerator::genExpr(shared_ptr<ASTNode> node) {
         }
         return "0";  // Default for empty char
     }
+
+    if (t == "EndLine") return "\n";
 
     // ---- Variable reference ----
     if (t == "ID") return node->value;

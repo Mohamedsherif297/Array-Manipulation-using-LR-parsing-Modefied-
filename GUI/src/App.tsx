@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Header from './components/Header'
 import EditorPanel from './components/EditorPanel'
 import OutputPanel from './components/OutputPanel'
@@ -49,8 +49,13 @@ function App() {
   const [problemsPanelHeight, setProblemsPanelHeight] = useState(200)
   const [isDarkMode, setIsDarkMode] = useState(true)
   const [consoleInput, setConsoleInput] = useState('')
+  const [consoleHistory, setConsoleHistory] = useState('')
   const [undoStack, setUndoStack] = useState<string[]>([])
   const [redoStack, setRedoStack] = useState<string[]>([])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light')
+  }, [isDarkMode])
 
   const handleCodeChange = (nextCode: string) => {
     if (nextCode === code) return
@@ -76,8 +81,7 @@ function App() {
   }
 
   const handleThemeToggle = () => {
-    setIsDarkMode(!isDarkMode)
-    document.documentElement.setAttribute('data-theme', isDarkMode ? 'light' : 'dark')
+    setIsDarkMode(prev => !prev)
   }
 
   const handleCompile = async () => {
@@ -115,6 +119,12 @@ function App() {
 
       const endTime = Date.now()
       setCompilationTime(endTime - startTime)
+
+      const runLog = [
+        '---- Run ----',
+        result.consoleOutput?.trimEnd() || '(no output)',
+      ].join('\n')
+      setConsoleHistory(prev => prev ? `${prev.trimEnd()}\n${runLog}\n` : `${runLog}\n`)
       
       if (result.success) {
         setStatus('success')
@@ -143,6 +153,10 @@ function App() {
     setCurrentPhase('None')
     setCompilationTime(0)
     setHighlightedLine(null)
+  }
+
+  const handleClearConsole = () => {
+    setConsoleHistory('')
   }
 
   const handleErrorClick = (line: number) => {
@@ -188,9 +202,10 @@ function App() {
         height={problemsPanelHeight}
         onHeightChange={setProblemsPanelHeight}
         onErrorClick={handleErrorClick}
-        consoleOutput={output?.consoleOutput || ''}
+        consoleOutput={consoleHistory || output?.consoleOutput || ''}
         consoleInput={consoleInput}
         onConsoleInputChange={setConsoleInput}
+        onClearConsole={handleClearConsole}
       />
     </div>
   )

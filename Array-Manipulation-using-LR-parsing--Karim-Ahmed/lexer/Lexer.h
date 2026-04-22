@@ -57,7 +57,7 @@ public:
                 if (word == "int" || word == "float" || word == "double" || word == "char" || word == "string") {
                     tokens.push_back(Token(TokenType::DATATYPE, word, currentLine));
                     last_type = word; // Update last declared type
-                } else if (word == "return" || word == "cout" || word == "cin") {
+                } else if (word == "return" || word == "cout" || word == "cin" || word == "endl" || word == "endLine") {
                     tokens.push_back(Token(TokenType::RESERVED, word, currentLine));
                 } else {
                     st.addSymbol(word, last_type);

@@ -419,6 +419,11 @@ Node* parse(vector<tuple<string,string,int>> input) {
             else if (p.lhs == "Factor") {
                 if (children.size() == 3) {
                     newNode = children[1];
+                } else if (children[0]->type == "endl" || children[0]->type == "endLine") {
+                    Node* node = new Node();
+                    node->type = "EndLine";
+                    node->lineNumber = children[0]->lineNumber;
+                    newNode = node;
                 } else if (children[0]->type == "NUM") {
                     Node* node = new Node();
                     node->type = "Number";

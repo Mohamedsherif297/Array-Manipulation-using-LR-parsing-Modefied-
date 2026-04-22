@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { CompilerError } from '../App'
 import './ProblemsPanel.css'
 
@@ -11,14 +11,16 @@ interface ProblemsPanelProps {
   consoleOutput: string
   consoleInput: string
   onConsoleInputChange: (value: string) => void
+  onClearConsole: () => void
 }
 
 type ProblemTab = 'problems' | 'warnings' | 'output' | 'console'
 
-function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick, consoleOutput, consoleInput, onConsoleInputChange }: ProblemsPanelProps) {
+function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick, consoleOutput, consoleInput, onConsoleInputChange, onClearConsole }: ProblemsPanelProps) {
   const [activeTab, setActiveTab] = useState<ProblemTab>('problems')
   const [isResizing, setIsResizing] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const consoleScrollRef = useRef<HTMLDivElement>(null)
 
   const MIN_HEIGHT = 40  // Just show the header when collapsed
   const MAX_HEIGHT = 400
@@ -57,6 +59,12 @@ function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick,
       window.removeEventListener('mouseup', handleMouseUp)
     }
   }, [isResizing, onHeightChange])
+
+  useEffect(() => {
+    if (consoleScrollRef.current) {
+      consoleScrollRef.current.scrollTop = consoleScrollRef.current.scrollHeight
+    }
+  }, [consoleOutput, activeTab])
 
   const handleMouseDown = () => {
     setIsResizing(true)
@@ -154,7 +162,7 @@ function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick,
             <span>{isCollapsed ? '▲' : '▼'}</span>
           </button>
           <button className="icon-btn" title="Clear All">
-            <span>🗑️</span>
+            <span onClick={onClearConsole}>🗑️</span>
           </button>
           <button className="icon-btn" title="Filter">
             <span>🔽</span>
@@ -229,9 +237,9 @@ function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick,
           )}
 
           {activeTab === 'output' && (
-            <div className="console-output">
+            <div className="console-output" ref={consoleScrollRef}>
               {consoleOutput ? (
-                consoleOutput.split('\n').filter(Boolean).map((line, index) => (
+                consoleOutput.split('\n').map((line, index) => (
                   <div key={index} className="console-line">{line}</div>
                 ))
               ) : (
@@ -241,8 +249,16 @@ function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick,
           )}
 
           {activeTab === 'console' && (
-            <div className="console-output">
+            <div className="console-output" ref={consoleScrollRef}>
               <div className="console-line">Provide stdin values for cin (space/newline separated), then Compile.</div>
+              <div className="console-line">Runtime console output:</div>
+              {consoleOutput ? (
+                consoleOutput.split('\n').map((line, index) => (
+                  <div key={`console-out-${index}`} className="console-line">{line}</div>
+                ))
+              ) : (
+                <div className="console-line">(no output)</div>
+              )}
               <textarea
                 className="console-input-area"
                 value={consoleInput}
