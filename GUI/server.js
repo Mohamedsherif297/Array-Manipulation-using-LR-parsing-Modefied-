@@ -327,6 +327,7 @@ app.post('/api/compile', async (req, res) => {
   const timestamp = Date.now()
   const tempFile = path.join(TEMP_DIR, `input_${timestamp}.txt`)
   const astFile = path.join(COMPILER_PATH, 'ast.json')
+  const traceFile = path.join(COMPILER_PATH, 'parse_trace.json')
   const annotatedAstFile = path.join(TEMP_DIR, 'annotated_ast.json')
   const symbolTableFile = path.join(TEMP_DIR, 'symbol_table.json')
   const irFile = path.join(TEMP_DIR, 'ir.txt')
@@ -546,10 +547,11 @@ app.post('/api/compile', async (req, res) => {
       console.log('Skipping code generation due to previous errors')
       
       // Read available output files
-      const [ast, annotatedAst, symbolTable] = await Promise.all([
+      const [ast, annotatedAst, symbolTable, earlyTrace] = await Promise.all([
         fs.readFile(astFile, 'utf-8').then(JSON.parse).catch(() => null),
         fs.readFile(annotatedAstFile, 'utf-8').then(JSON.parse).catch(() => null),
-        fs.readFile(symbolTableFile, 'utf-8').then(JSON.parse).catch(() => null)
+        fs.readFile(symbolTableFile, 'utf-8').then(JSON.parse).catch(() => null),
+        fs.readFile(traceFile, 'utf-8').then(JSON.parse).catch(() => null)
       ])
 
       // Clean up temporary files
@@ -570,7 +572,8 @@ app.post('/api/compile', async (req, res) => {
         warnings,
         ast: ast || annotatedAst,
         symbolTable,
-        tac: null
+        tac: null,
+        parseTrace: earlyTrace
       })
     }
 
@@ -602,11 +605,12 @@ app.post('/api/compile', async (req, res) => {
     }
 
     // Read all output files
-    const [ast, annotatedAst, symbolTable, tac] = await Promise.all([
+    const [ast, annotatedAst, symbolTable, tac, parseTraceData] = await Promise.all([
       fs.readFile(astFile, 'utf-8').then(JSON.parse).catch(() => null),
       fs.readFile(annotatedAstFile, 'utf-8').then(JSON.parse).catch(() => null),
       fs.readFile(symbolTableFile, 'utf-8').then(JSON.parse).catch(() => null),
-      fs.readFile(irFile, 'utf-8').catch(() => null)
+      fs.readFile(irFile, 'utf-8').catch(() => null),
+      fs.readFile(traceFile, 'utf-8').then(JSON.parse).catch(() => null)
     ])
 
     // Clean up temporary files
@@ -649,7 +653,8 @@ app.post('/api/compile', async (req, res) => {
       symbolTable,
       tac,
       consoleOutput,
-      runtimeError
+      runtimeError,
+      parseTrace: parseTraceData
     })
 
   } catch (error) {

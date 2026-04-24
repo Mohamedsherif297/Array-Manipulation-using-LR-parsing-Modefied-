@@ -15,12 +15,50 @@ struct Node {
     string value;
     string op;
     string arrayName;
-    int lineNumber = 0;  // Track line number for error reporting
+    int lineNumber = 0;
     Node* left = nullptr;
     Node* right = nullptr;
     Node* index = nullptr;
     vector<Node*> children;
 };
+
+// ============================================================
+//  PARSING TRACE  —  logging layer only, zero parser changes
+// ============================================================
+
+struct ParseStep {
+    string stack;
+    string input;
+    string action;
+    ParseStep(string s, string i, string a) : stack(move(s)), input(move(i)), action(move(a)) {}
+};
+
+inline vector<ParseStep> parseTrace;
+
+static string stackToString(stack<Node*> ns) {
+    vector<string> syms;
+    while (!ns.empty()) {
+        Node* n = ns.top(); ns.pop();
+        if (!n->type.empty()) syms.push_back(n->type);
+    }
+    reverse(syms.begin(), syms.end());
+    string result = "$";
+    for (auto& s : syms) result += " " + s;
+    return result;
+}
+
+static string inputToString(const vector<tuple<string,string,int>>& input, int pos) {
+    string result;
+    for (int i = pos; i < (int)input.size(); ++i) {
+        const string& tok = get<0>(input[i]);
+        result += (tok == "$" ? "$" : tok);
+        if (i + 1 < (int)input.size()) result += " ";
+    }
+    if (result.empty() || result.back() != '$') result += " $";
+    return result;
+}
+
+// ============================================================
 
 Node* parse(vector<tuple<string,string,int>> input) {
 
@@ -33,6 +71,9 @@ Node* parse(vector<tuple<string,string,int>> input) {
         }
         return 0;
     };
+
+    // Clear trace from any previous parse
+    parseTrace.clear();
 
     stack<int> stateStack;
     stack<Node*> nodeStack;
@@ -107,6 +148,13 @@ Node* parse(vector<tuple<string,string,int>> input) {
         if (action[0] == 'S') {
             int nextState = stoi(action.substr(1));
 
+            // LOG before pushing (stack shows state before shift)
+            parseTrace.push_back(ParseStep(
+                stackToString(nodeStack),
+                inputToString(input, index),
+                "shift " + get<0>(input[index])
+            ));
+
             Node* node = new Node();
             node->type = token;
             node->value = value;
@@ -125,7 +173,19 @@ Node* parse(vector<tuple<string,string,int>> input) {
 
             vector<Node*> children;
 
-            for (int i = 0; i < p.rhs.size(); i++) {
+            // LOG before popping — stack still shows the handle
+            {
+                string rhsStr;
+                for (auto& sym : p.rhs) rhsStr += sym + " ";
+                if (!rhsStr.empty()) rhsStr.pop_back();
+                parseTrace.push_back(ParseStep(
+                    stackToString(nodeStack),
+                    inputToString(input, index),
+                    "reduce " + p.lhs + " \u2192 " + rhsStr
+                ));
+            }
+
+            for (int i = 0; i < (int)p.rhs.size(); i++) {
                 stateStack.pop();
                 children.push_back(nodeStack.top());
                 nodeStack.pop();
@@ -504,6 +564,12 @@ Node* parse(vector<tuple<string,string,int>> input) {
 
         // ================= ACCEPT =================
         else if (action == "ACC") {
+            // LOG accept step
+            parseTrace.push_back(ParseStep(
+                stackToString(nodeStack),
+                inputToString(input, index),
+                "accept"
+            ));
             cout << "Parsing Successful\n";
             return nodeStack.top();
         }

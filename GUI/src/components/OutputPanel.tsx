@@ -4,6 +4,7 @@ import ASTView from './ASTView'
 import SymbolTableView from './SymbolTableView'
 import LearnView from './LearnView'
 import ExprTreeView from './ExprTreeView'
+import ParseTraceView from './ParseTraceView'
 import './OutputPanel.css'
 
 interface OutputPanelProps {
@@ -90,6 +91,17 @@ function OutputPanel({
             <span className="tab-icon">🌿</span>
             <span className="tab-label">Expr Tree</span>
           </button>
+
+          <button
+            className={`tab ${activeTab === 'parsetrace' ? 'active' : ''}`}
+            onClick={() => onTabChange('parsetrace')}
+          >
+            <span className="tab-icon">📜</span>
+            <span className="tab-label">Parse Trace</span>
+            {output?.parseTrace && (
+              <span className="tab-badge">{output.parseTrace.length}</span>
+            )}
+          </button>
         </div>
       )}
 
@@ -165,6 +177,9 @@ function OutputPanel({
             )}
             {activeTab === 'exprtree' && (
               <ExprTreeView ast={output.ast} />
+            )}
+            {activeTab === 'parsetrace' && (
+              <ParseTraceView steps={output.parseTrace || []} />
             )}
           </>
         )}

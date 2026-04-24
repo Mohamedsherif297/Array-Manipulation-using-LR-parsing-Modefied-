@@ -150,6 +150,32 @@ int main(int argc, char* argv[]) {
     printJSON(root, 0, &astFile);
     astFile.close();
 
+    // Write parse trace to JSON for GUI visualization
+    ofstream traceFile("parse_trace.json");
+    if (traceFile) {
+        traceFile << "[\n";
+        for (size_t i = 0; i < parseTrace.size(); ++i) {
+            const auto& step = parseTrace[i];
+            // Escape backslashes and quotes in strings
+            auto esc = [](const string& s) {
+                string out;
+                for (char c : s) {
+                    if (c == '"') out += "\\\"";
+                    else if (c == '\\') out += "\\\\";
+                    else out += c;
+                }
+                return out;
+            };
+            traceFile << "  {\"stack\":\"" << esc(step.stack)
+                      << "\",\"input\":\"" << esc(step.input)
+                      << "\",\"action\":\"" << esc(step.action) << "\"}";
+            if (i + 1 < parseTrace.size()) traceFile << ",";
+            traceFile << "\n";
+        }
+        traceFile << "]\n";
+        traceFile.close();
+    }
+
     cout << "✅ Parsing successful!\n";
     cout << "   AST saved to: ast.json\n";
 
