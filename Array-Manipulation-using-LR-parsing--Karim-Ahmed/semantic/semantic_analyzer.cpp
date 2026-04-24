@@ -121,6 +121,10 @@ void SemanticAnalyzer::visitFunctionDef(shared_ptr<ASTNode> node) {
     node->children[0]->dataType = returnType;
     node->children[1]->dataType = returnType;
     
+    // Enter function scope
+    string previousScope = currentScope_;
+    currentScope_ = "function(" + funcName + ")";
+
     // Track if we find a return statement
     bool hasReturn = false;
     
@@ -134,6 +138,9 @@ void SemanticAnalyzer::visitFunctionDef(shared_ptr<ASTNode> node) {
             visitStatement(stmt);
         }
     }
+
+    // Restore previous scope
+    currentScope_ = previousScope;
     
     // Check if main() has a return statement
     if (funcName == "main" && !hasReturn) {
@@ -143,8 +150,18 @@ void SemanticAnalyzer::visitFunctionDef(shared_ptr<ASTNode> node) {
 
 void SemanticAnalyzer::visitProgram(shared_ptr<ASTNode> node) {
     node->dataType = "void";
-    for (auto& child : node->children)
-        visitStatement(child);
+    for (auto& child : node->children) {
+        // Global declarations come before FunctionDef
+        if (child->type == "FunctionDef") {
+            visitFunctionDef(child);
+        } else {
+            // Global DeclStmt / DeclAssignStmt — visit with global scope
+            string savedScope = currentScope_;
+            currentScope_ = "global";
+            visitStatement(child);
+            currentScope_ = savedScope;
+        }
+    }
 }
 
 void SemanticAnalyzer::visitStatement(shared_ptr<ASTNode> node) {
@@ -224,6 +241,7 @@ void SemanticAnalyzer::visitDecl(shared_ptr<ASTNode> node) {
     sym.isArray = false;
     sym.size1   = 0;
     sym.size2   = 0;
+    sym.scope   = currentScope_;
 
     // Optional Dimensions node
     if (node->children.size() >= 3 && 
@@ -292,6 +310,7 @@ void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
     sym.isArray = false;
     sym.size1   = 0;
     sym.size2   = 0;
+    sym.scope   = currentScope_;
 
     // Check if this is an array declaration with initialization
     // Array: Type ID ArrayDims = ArrayInit  (4 children)
@@ -380,8 +399,8 @@ void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
                     expectedSize = sym.size1 * sym.size2;
                 }
                 
-                // Validate array size matches initializer count
-                if (initializerCount != expectedSize) {
+                // Validate array size - allow fewer initializers (rest are zero-initialized, like C++)
+                if (initializerCount > expectedSize) {
                     addError("Array size mismatch: declared size " + to_string(expectedSize) +
                              " but provided " + to_string(initializerCount) + " initializers", *arrNode);
                 }

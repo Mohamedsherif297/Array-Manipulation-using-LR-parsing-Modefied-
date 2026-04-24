@@ -69,37 +69,33 @@ bool CodeGenerator::writeIR(const string& filePath) const {
 
 void CodeGenerator::printIR(ostream& out) const {
     for (const Quad& q : ir_) {
+        string line;
         // Format each quad as a readable TAC line.
         if (q.op == "ASSIGN") {
-            // result = arg1
-            out << q.result << " = " << q.arg1 << "\n";
+            line = q.result + " = " + q.arg1;
         } else if (q.op == "LOAD") {
-            // result = arg1[arg2]   (array read)
-            out << q.result << " = " << q.arg1 << "[" << q.arg2 << "]\n";
+            line = q.result + " = " + q.arg1 + "[" + q.arg2 + "]";
         } else if (q.op == "STORE") {
-            // arg1[arg2] = result   (array write)
-            out << q.arg1 << "[" << q.arg2 << "] = " << q.result << "\n";
+            line = q.arg1 + "[" + q.arg2 + "] = " + q.result;
         } else if (q.op == "DECL") {
-            // Declaration annotation (no executable code)
-            out << "// DECL " << q.result;
-            if (!q.arg1.empty()) out << "  type=" << q.arg1;
-            out << "\n";
+            line = "// DECL " + q.result;
+            if (!q.arg1.empty()) line += "  type=" + q.arg1;
         } else if (q.op == "PRINT") {
-            // PRINT value
-            out << "PRINT " << q.arg1 << "\n";
+            line = "PRINT " + q.arg1;
         } else if (q.op == "PRINTLN") {
-            // Explicit newline output
-            out << "PRINTLN\n";
+            line = "PRINTLN";
         } else if (q.op == "READ") {
-            // READ target
-            out << "READ " << q.result << "\n";
+            line = "READ " + q.result;
         } else if (q.arg2.empty()) {
-            // Unary:  result = op arg1
-            out << q.result << " = " << q.op << " " << q.arg1 << "\n";
+            line = q.result + " = " + q.op + " " + q.arg1;
         } else {
-            // Binary: result = arg1 op arg2
-            out << q.result << " = " << q.arg1
-                << " " << q.op << " " << q.arg2 << "\n";
+            line = q.result + " = " + q.arg1 + " " + q.op + " " + q.arg2;
+        }
+        // Append source line annotation
+        if (q.sourceLine > 0) {
+            out << line << "  ; line:" << q.sourceLine << "\n";
+        } else {
+            out << line << "\n";
         }
     }
 }
@@ -111,8 +107,9 @@ void CodeGenerator::printIR(ostream& out) const {
 void CodeGenerator::emit(const string& op,
                          const string& arg1,
                          const string& arg2,
-                         const string& result) {
-    ir_.emplace_back(op, arg1, arg2, result);
+                         const string& result,
+                         int sourceLine) {
+    ir_.emplace_back(op, arg1, arg2, result, sourceLine > 0 ? sourceLine : currentLine_);
 }
 
 string CodeGenerator::newTemp() {
@@ -148,6 +145,9 @@ void CodeGenerator::genFunctionDef(shared_ptr<ASTNode> node) {
 
 void CodeGenerator::genStatement(shared_ptr<ASTNode> node) {
     if (!node) return;
+
+    // Track source line for all emitted quads from this statement
+    if (node->line > 0) currentLine_ = node->line;
 
     const string& t = node->type;
 

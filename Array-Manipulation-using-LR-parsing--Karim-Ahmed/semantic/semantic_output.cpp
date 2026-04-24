@@ -76,6 +76,7 @@ void writeSymbolTable(const SemanticSymbolTable& symTable, const string& filePat
     for (const auto& [name, sym] : entries) {
         file << "  \"" << name << "\": {\n";
         file << "    \"type\": \""    << sym.type    << "\",\n";
+        file << "    \"scope\": \""   << sym.scope   << "\",\n";
         file << "    \"isArray\": "   << (sym.isArray ? "true" : "false");
 
         if (sym.isArray) {

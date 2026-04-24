@@ -72,7 +72,8 @@ private:
     void emit(const string& op,
               const string& arg1,
               const string& arg2,
-              const string& result);
+              const string& result,
+              int sourceLine = 0);
 
     // Generate a fresh temporary name: t1, t2, …
     string newTemp();
@@ -84,6 +85,7 @@ private:
     IR                   ir_;
     int                  tempCounter_ = 0;
     bool                 hasError_    = false;
+    int                  currentLine_ = 0;   // source line being processed
 
     void error(const string& msg);
 };

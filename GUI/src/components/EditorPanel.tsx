@@ -17,6 +17,8 @@ interface EditorPanelProps {
 function EditorPanel({ code, onChange, highlightedLine, errors, onLineClick, canUndo, canRedo, onUndo, onRedo }: EditorPanelProps) {
   const [cursorPosition, setCursorPosition] = useState({ line: 1, col: 1 })
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const lineNumbersRef = useRef<HTMLDivElement>(null)
+  const codeAreaRef = useRef<HTMLDivElement>(null)
   
   const lines = code.split('\n')
   const lineCount = lines.length
@@ -182,6 +184,29 @@ function EditorPanel({ code, onChange, highlightedLine, errors, onLineClick, can
     updateCursorPosition()
   }, [code])
 
+  // Sync line numbers scroll with code area scroll
+  useEffect(() => {
+    const codeArea = codeAreaRef.current
+    const lineNumbers = lineNumbersRef.current
+    if (!codeArea || !lineNumbers) return
+
+    const handleScroll = () => {
+      lineNumbers.scrollTop = codeArea.scrollTop
+    }
+
+    codeArea.addEventListener('scroll', handleScroll)
+    return () => codeArea.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Resize textarea to match content so .code-area scrolls the container
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    textarea.style.height = 'auto'
+    textarea.style.height = textarea.scrollHeight + 'px'
+    textarea.style.width = Math.max(textarea.scrollWidth, textarea.clientWidth) + 'px'
+  }, [code])
+
   // Syntax highlighting - process in correct order to avoid conflicts
   const highlightSyntax = (line: string) => {
     if (!line) return '&nbsp;'
@@ -261,7 +286,7 @@ function EditorPanel({ code, onChange, highlightedLine, errors, onLineClick, can
       </div>
 
       <div className="editor-content">
-        <div className="line-numbers">
+        <div className="line-numbers" ref={lineNumbersRef}>
           {lines.map((_, index) => {
             const lineNum = index + 1
             const hasError = errorsByLine.has(lineNum)
@@ -280,7 +305,7 @@ function EditorPanel({ code, onChange, highlightedLine, errors, onLineClick, can
           })}
         </div>
 
-        <div className="code-area">
+        <div className="code-area" ref={codeAreaRef}>
           <textarea
             ref={textareaRef}
             className="code-input"
@@ -296,25 +321,38 @@ function EditorPanel({ code, onChange, highlightedLine, errors, onLineClick, can
           />
           
           <div className="code-highlight" aria-hidden="true">
-            {lines.map((line, index) => (
-              <div
-                key={index}
-                className={`code-line ${index + 1 === highlightedLine ? 'highlighted' : ''}`}
-                dangerouslySetInnerHTML={{ __html: highlightSyntax(line) || '&nbsp;' }}
-              />
-            ))}
+            {lines.map((line, index) => {
+              const lineNum = index + 1
+              const hasError = errorsByLine.has(lineNum)
+              return (
+                <div
+                  key={index}
+                  className={`code-line ${lineNum === highlightedLine ? 'highlighted' : ''} ${hasError ? 'error-line-bg' : ''}`}
+                  dangerouslySetInnerHTML={{ __html: highlightSyntax(line) || '&nbsp;' }}
+                />
+              )
+            })}
           </div>
 
-          {/* Error squiggles */}
+          {/* Inline error highlights with tooltips */}
           {Array.from(errorsByLine.entries()).map(([lineNum, lineErrors]) => (
             <div
               key={lineNum}
-              className="error-squiggle"
-              style={{
-                top: `${(lineNum - 1) * 22.4}px`,
-              }}
-              title={lineErrors[0].message}
-            />
+              className="error-line-highlight"
+              style={{ top: `${(lineNum - 1) * 22.4 + 12}px` }}
+            >
+              <div className="error-squiggle-line" />
+              <div className="error-inline-tooltip">
+                {lineErrors.map((e, i) => (
+                  <div key={i} className="error-tooltip-item">
+                    <span className={`error-tooltip-phase error-phase-${e.phase}`}>
+                      {e.phase.toUpperCase()}
+                    </span>
+                    <span className="error-tooltip-msg">{e.message}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </div>

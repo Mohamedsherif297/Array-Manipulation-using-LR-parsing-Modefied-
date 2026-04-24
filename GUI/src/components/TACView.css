@@ -214,3 +214,90 @@
     font-size: 12px;
   }
 }
+
+/* ============================================
+   TAC DIFF VIEW
+   ============================================ */
+
+.tac-diff-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+}
+
+.tac-diff-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.tac-diff-col-header {
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--bg-tertiary);
+}
+
+.tac-diff-original  { color: var(--text-secondary); border-right: 1px solid var(--border-default); }
+.tac-diff-optimized { color: var(--accent-primary); }
+
+.tac-diff-body {
+  flex: 1;
+  overflow: auto;
+}
+
+.tac-diff-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 23.4px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.tac-diff-row.tac-diff-same    { background: transparent; }
+.tac-diff-row.tac-diff-removed { background: rgba(239, 68, 68, 0.08); }
+.tac-diff-row.tac-diff-added   { background: rgba(16, 185, 129, 0.08); }
+.tac-diff-row.tac-diff-folded  { background: rgba(245, 158, 11, 0.08); }
+
+.tac-diff-cell {
+  padding: 3px 16px;
+  display: flex;
+  align-items: center;
+  line-height: 1.8;
+}
+
+.tac-diff-left  { border-right: 1px solid var(--border-default); }
+
+.tac-diff-row.tac-diff-removed .tac-diff-left  { border-left: 3px solid var(--accent-error); padding-left: 13px; }
+.tac-diff-row.tac-diff-added   .tac-diff-right { border-left: 3px solid var(--accent-success); padding-left: 13px; }
+.tac-diff-row.tac-diff-folded  .tac-diff-left,
+.tac-diff-row.tac-diff-folded  .tac-diff-right { border-left: 3px solid var(--accent-warning); padding-left: 13px; }
+
+.tac-diff-empty {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.tac-diff-legend {
+  display: flex;
+  gap: 10px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border-default);
+  background: var(--bg-secondary);
+}
+
+.diff-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.diff-same    { background: var(--bg-tertiary);              color: var(--text-tertiary); }
+.diff-folded  { background: rgba(245,158,11,0.15);           color: var(--accent-warning); }
+.diff-removed { background: rgba(239,68,68,0.15);            color: var(--accent-error); }
+.diff-added   { background: rgba(16,185,129,0.15);           color: var(--accent-success); }

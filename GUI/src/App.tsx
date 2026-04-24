@@ -29,8 +29,61 @@ export interface CompilerOutput {
   }
 }
 
+// One TAC instruction mapped to its source context
+export interface ExecutionStep {
+  tacIndex: number       // index in the TAC lines array
+  sourceLine: number     // source code line (0 = unknown)
+  affectedVars: string[] // variable names written/read in this instruction
+}
+
 export type CompilationStatus = 'idle' | 'compiling' | 'success' | 'error'
-export type OutputTab = 'tac' | 'ast' | 'symbols' | 'learn'
+export type OutputTab = 'tac' | 'ast' | 'symbols' | 'learn' | 'exprtree'
+
+// Parse TAC text into ExecutionStep timeline
+function buildExecutionSteps(tac: string): ExecutionStep[] {
+  const steps: ExecutionStep[] = []
+  const lines = tac.split('\n').filter(l => l.trim())
+
+  lines.forEach((line, idx) => {
+    // Extract source line from trailing annotation:  ; line:N
+    const lineMatch = line.match(/;\s*line:(\d+)\s*$/)
+    const sourceLine = lineMatch ? parseInt(lineMatch[1]) : 0
+
+    // Extract affected variable names from the instruction
+    const clean = line.replace(/;\s*line:\d+\s*$/, '').trim()
+    const vars = new Set<string>()
+
+    // Skip pure comments
+    if (clean.startsWith('//')) {
+      steps.push({ tacIndex: idx, sourceLine, affectedVars: [] })
+      return
+    }
+
+    // LHS of assignment:  "x = ..." or "x[...] = ..."  or "arr[i] = val"
+    const lhsMatch = clean.match(/^([a-zA-Z_]\w*)(?:\[|[\s=])/)
+    if (lhsMatch) vars.add(lhsMatch[1])
+
+    // RHS identifiers (not temporaries, not numbers)
+    const rhsMatch = clean.match(/=\s*(.+)$/)
+    if (rhsMatch) {
+      const rhs = rhsMatch[1]
+      const ids = rhs.match(/[a-zA-Z_]\w*/g) || []
+      ids.forEach(id => {
+        if (!id.startsWith('t') || isNaN(Number(id.slice(1)))) {
+          vars.add(id)
+        }
+      })
+    }
+
+    // PRINT / READ targets
+    const printMatch = clean.match(/^(?:PRINT|READ)\s+([a-zA-Z_]\w*)/)
+    if (printMatch) vars.add(printMatch[1])
+
+    steps.push({ tacIndex: idx, sourceLine, affectedVars: [...vars] })
+  })
+
+  return steps
+}
 
 function App() {
   const [code, setCode] = useState(`int main() {
@@ -52,6 +105,12 @@ function App() {
   const [consoleHistory, setConsoleHistory] = useState('')
   const [undoStack, setUndoStack] = useState<string[]>([])
   const [redoStack, setRedoStack] = useState<string[]>([])
+
+  // Execution stepper state
+  const [executionSteps, setExecutionSteps] = useState<ExecutionStep[]>([])
+  const [activeStepIndex, setActiveStepIndex] = useState<number | null>(null)
+
+  const activeStep = activeStepIndex !== null ? executionSteps[activeStepIndex] ?? null : null
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light')
@@ -130,10 +189,17 @@ function App() {
         setStatus('success')
         setCurrentPhase('Complete')
         setOutput(result)
+        // Build execution step timeline from TAC
+        if (result.tac) {
+          setExecutionSteps(buildExecutionSteps(result.tac))
+          setActiveStepIndex(null)
+        }
       } else {
         setStatus('error')
         setCurrentPhase('Failed')
         setOutput(result)
+        setExecutionSteps([])
+        setActiveStepIndex(null)
       }
     } catch (error) {
       const endTime = Date.now()
@@ -153,6 +219,33 @@ function App() {
     setCurrentPhase('None')
     setCompilationTime(0)
     setHighlightedLine(null)
+    setExecutionSteps([])
+    setActiveStepIndex(null)
+  }
+
+  const handleTacLineClick = (tacIndex: number) => {
+    setActiveStepIndex(tacIndex)
+    const step = executionSteps[tacIndex]
+    if (step?.sourceLine) setHighlightedLine(step.sourceLine)
+  }
+
+  const handleStepForward = () => {
+    setActiveStepIndex(prev => {
+      const next = prev === null ? 0 : Math.min(prev + 1, executionSteps.length - 1)
+      const step = executionSteps[next]
+      if (step?.sourceLine) setHighlightedLine(step.sourceLine)
+      return next
+    })
+  }
+
+  const handleStepBackward = () => {
+    setActiveStepIndex(prev => {
+      if (prev === null || prev === 0) return null
+      const next = prev - 1
+      const step = executionSteps[next]
+      if (step?.sourceLine) setHighlightedLine(step.sourceLine)
+      return next
+    })
   }
 
   const handleClearConsole = () => {
@@ -192,7 +285,11 @@ function App() {
           output={output}
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          onTacLineClick={() => {}}
+          onTacLineClick={handleTacLineClick}
+          activeStep={activeStep}
+          onStepForward={handleStepForward}
+          onStepBackward={handleStepBackward}
+          executionSteps={executionSteps}
         />
       </div>
 

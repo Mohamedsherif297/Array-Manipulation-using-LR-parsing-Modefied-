@@ -16,7 +16,14 @@ inline vector <Production> grammar = {
 
 {"S'", {"Program"}},
 
+{"Program", {"GlobalList", "FunctionDef"}},
 {"Program", {"FunctionDef"}},
+
+{"GlobalList", {"GlobalList", "GlobalDecl"}},
+{"GlobalList", {"GlobalDecl"}},
+
+{"GlobalDecl", {"DeclStmt"}},
+{"GlobalDecl", {"DeclAssignStmt"}},
 
 {"FunctionDef", {"Type", "ID", "(", ")", "{", "StmtList", "}"}},
 
@@ -125,7 +132,7 @@ inline set<string> terminals = {
 
 inline set<string> nonTerminals = {
 
-"S'","Program","FunctionDef","StmtList","Stmt",
+"S'","Program","FunctionDef","GlobalList","GlobalDecl","StmtList","Stmt",
 
 "DeclStmt","AssignStmt","DeclAssignStmt","ReturnStmt",
 

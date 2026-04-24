@@ -239,7 +239,39 @@ function runProgram(ast, symbolTable, stdinText = '') {
       const lhs = node.children?.[1]
       const rhs = node.children?.[node.children.length - 1]
       if (rhs?.type === 'ArrayInit') {
-        // Array initialisation is already reflected in generated assignments; skip in runtime simulator.
+        const name = lhs?.value
+        if (name) {
+          const current = env[name]
+          const elems = rhs.children || []
+          if (Array.isArray(current) && current.length > 0 && Array.isArray(current[0])) {
+            // 2D array: flatten initializers row by row
+            let idx = 0
+            for (let r = 0; r < current.length; r++) {
+              for (let c = 0; c < current[r].length; c++) {
+                if (idx < elems.length) {
+                  // each elem may itself be an ArrayInit row
+                  const rowElem = elems[idx]
+                  if (rowElem?.type === 'ArrayInit') {
+                    const rowElems = rowElem.children || []
+                    for (let k = 0; k < current[r].length; k++) {
+                      current[r][k] = castValueToType(evalExpr(rowElems[k]), getSymbolType(name))
+                    }
+                  } else {
+                    current[r][c] = castValueToType(evalExpr(rowElem), getSymbolType(name))
+                    idx++
+                    continue
+                  }
+                }
+                idx++
+              }
+            }
+          } else if (Array.isArray(current)) {
+            // 1D array: assign each initializer value by index
+            for (let i = 0; i < elems.length && i < current.length; i++) {
+              current[i] = castValueToType(evalExpr(elems[i]), getSymbolType(name))
+            }
+          }
+        }
         return false
       }
       assignTarget(lhs, evalExpr(rhs))

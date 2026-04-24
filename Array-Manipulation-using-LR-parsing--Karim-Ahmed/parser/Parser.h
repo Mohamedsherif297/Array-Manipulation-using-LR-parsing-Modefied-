@@ -137,7 +137,41 @@ Node* parse(vector<tuple<string,string,int>> input) {
 
             // ================= PROGRAM =================
             if (p.lhs == "Program") {
-                newNode = children[0];
+                if (children.size() == 2) {
+                    // GlobalList FunctionDef — wrap into a Program node
+                    Node* node = new Node();
+                    node->type = "Program";
+                    node->lineNumber = getLineFromChildren(children);
+                    // Flatten global decls as children, then append FunctionDef
+                    for (auto* c : children[0]->children)
+                        node->children.push_back(c);
+                    node->children.push_back(children[1]); // FunctionDef
+                    newNode = node;
+                } else {
+                    // Just FunctionDef — keep existing behaviour
+                    newNode = children[0];
+                }
+            }
+
+            // ================= GLOBAL LIST =================
+            else if (p.lhs == "GlobalList") {
+                Node* node = new Node();
+                node->type = "GlobalList";
+                node->lineNumber = getLineFromChildren(children);
+                if (children.size() == 2) {
+                    // GlobalList GlobalDecl
+                    node->children = children[0]->children;
+                    node->children.push_back(children[1]);
+                } else {
+                    // GlobalDecl
+                    node->children.push_back(children[0]);
+                }
+                newNode = node;
+            }
+
+            // ================= GLOBAL DECL =================
+            else if (p.lhs == "GlobalDecl") {
+                newNode = children[0]; // transparent — DeclStmt or DeclAssignStmt
             }
 
             // ================= FUNCTION DEFINITION =================

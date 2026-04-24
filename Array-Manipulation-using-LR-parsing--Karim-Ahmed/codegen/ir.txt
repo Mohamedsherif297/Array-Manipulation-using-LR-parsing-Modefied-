@@ -1,23 +1,23 @@
-// DECL x  type=int array[4]
-x[0] = 1
-x[1] = 2
-x[2] = 3
-x[3] = 4
-// DECL y  type=int array[2][3]
-y[0] = 1
-y[1] = 2
-y[2] = 3
-y[3] = 4
-y[4] = 5
-y[5] = 6
 // DECL a  type=int
-t1 = x[0]
-a = t1
+a = 2
 // DECL b  type=int
-t2 = 1 * 3
-t3 = t2 + 2
-t4 = y[t3]
-b = t4
-READ a
-PRINT "hello"
-PRINT endl
+b = 3
+// DECL arr  type=int array[3]
+arr[0] = 1
+arr[1] = 2
+arr[2] = 3
+// DECL c  type=int
+t1 = a + b
+c = t1
+arr[0] = c
+// DECL temp  type=int
+t2 = arr[0]
+temp = t2
+t3 = arr[2]
+arr[0] = t3
+arr[2] = temp
+// DECL z  type=int
+t4 = arr[0]
+t5 = arr[1]
+t6 = t4 + t5
+z = t6

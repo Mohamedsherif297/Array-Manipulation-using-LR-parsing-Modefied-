@@ -30,6 +30,7 @@ public:
 private:
     SemanticSymbolTable& symTable_;
     vector<SemanticError> errors_;
+    string currentScope_ = "global";   // tracks current scope during traversal
 
     void addError(const string& msg, const ASTNode& node);
 

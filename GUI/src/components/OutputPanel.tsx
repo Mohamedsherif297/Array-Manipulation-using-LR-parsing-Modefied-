@@ -1,8 +1,9 @@
-import { OutputTab, CompilerOutput } from '../App'
+import { OutputTab, CompilerOutput, ExecutionStep } from '../App'
 import TACView from './TACView'
 import ASTView from './ASTView'
 import SymbolTableView from './SymbolTableView'
 import LearnView from './LearnView'
+import ExprTreeView from './ExprTreeView'
 import './OutputPanel.css'
 
 interface OutputPanelProps {
@@ -10,13 +11,21 @@ interface OutputPanelProps {
   activeTab: OutputTab
   onTabChange: (tab: OutputTab) => void
   onTacLineClick: (line: number) => void
+  activeStep: ExecutionStep | null
+  onStepForward: () => void
+  onStepBackward: () => void
+  executionSteps: ExecutionStep[]
 }
 
 function OutputPanel({
   output,
   activeTab,
   onTabChange,
-  onTacLineClick
+  onTacLineClick,
+  activeStep,
+  onStepForward,
+  onStepBackward,
+  executionSteps
 }: OutputPanelProps) {
   const getTacLineCount = () => {
     if (!output?.tac) return 0
@@ -72,6 +81,14 @@ function OutputPanel({
           >
             <span className="tab-icon">🧩</span>
             <span className="tab-label">Variable Visualizer</span>
+          </button>
+
+          <button
+            className={`tab ${activeTab === 'exprtree' ? 'active' : ''}`}
+            onClick={() => onTabChange('exprtree')}
+          >
+            <span className="tab-icon">🌿</span>
+            <span className="tab-label">Expr Tree</span>
           </button>
         </div>
       )}
@@ -131,6 +148,10 @@ function OutputPanel({
                 tac={output.tac}
                 optimizedTac={output.optimizedTac}
                 onLineClick={onTacLineClick}
+                activeStepIndex={activeStep?.tacIndex ?? null}
+                onStepForward={onStepForward}
+                onStepBackward={onStepBackward}
+                totalSteps={executionSteps.length}
               />
             )}
             {activeTab === 'ast' && (
@@ -140,7 +161,10 @@ function OutputPanel({
               <SymbolTableView symbolTable={output.symbolTable} />
             )}
             {activeTab === 'learn' && (
-              <LearnView output={output} />
+              <LearnView output={output} activeStep={activeStep} />
+            )}
+            {activeTab === 'exprtree' && (
+              <ExprTreeView ast={output.ast} />
             )}
           </>
         )}

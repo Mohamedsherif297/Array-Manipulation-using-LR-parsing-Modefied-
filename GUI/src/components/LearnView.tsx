@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
-import type { CompilerOutput } from '../App'
+import type { CompilerOutput, ExecutionStep } from '../App'
 import './LearnView.css'
 
 interface LearnViewProps {
   output: CompilerOutput | null
+  activeStep: ExecutionStep | null
 }
 
       type AccessFocus = {
@@ -221,10 +222,13 @@ interface LearnViewProps {
         return <div className={`learn-cell ${highlighted ? 'highlighted' : ''}`}>{String(value ?? '')}</div>
       }
 
-      function LearnView({ output }: LearnViewProps) {
+      function LearnView({ output, activeStep }: LearnViewProps) {
         const memory = useMemo(() => buildMemory(output), [output])
         const accessFocus = useMemo(() => findLastAccess(output?.ast), [output])
         const symbols = Object.entries(output?.symbolTable || {}) as Array<[string, any]>
+
+        // Variables highlighted by the active TAC step
+        const stepVars = new Set(activeStep?.affectedVars ?? [])
 
         if (!output) {
           return (
@@ -274,7 +278,7 @@ interface LearnViewProps {
                   {scalarSymbols.length === 0 ? (
                     <div className="empty-learn">No scalar variables</div>
                   ) : scalarSymbols.map(([name, sym]) => (
-                    <div key={name} className="scalar-row">
+                    <div key={name} className={`scalar-row ${stepVars.has(name) ? 'step-highlight' : ''}`}>
                       <span className="mono">{name}</span>
                       <span>{sym.type}</span>
                       <span className="mono value-box">{String(memory[name] ?? '')}</span>
@@ -295,7 +299,7 @@ interface LearnViewProps {
                   const focus = accessFocus?.name === name ? accessFocus.indices : null
 
                   return (
-                    <div key={name} className="array-card">
+                    <div key={name} className={`array-card ${stepVars.has(name) ? 'step-highlight' : ''}`}>
                       <div className="array-title">
                         <strong>{name}</strong>
                         <span>{sym.type}{is2D ? `[${rowCount}][${colCount}]` : `[${rowCount}]`}</span>

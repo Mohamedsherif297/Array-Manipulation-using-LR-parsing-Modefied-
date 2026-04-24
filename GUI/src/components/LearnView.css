@@ -490,3 +490,19 @@
     margin-top: 12px;
   }
 }
+
+/* ============================================
+   STEP HIGHLIGHT — active TAC step
+   ============================================ */
+
+.scalar-row.step-highlight {
+  background: rgba(59, 130, 246, 0.12);
+  border-left: 3px solid var(--accent-primary);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.array-card.step-highlight {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 30%, transparent);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
