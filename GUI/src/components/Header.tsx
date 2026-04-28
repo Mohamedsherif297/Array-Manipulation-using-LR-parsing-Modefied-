@@ -44,8 +44,11 @@ function Header({
     <header className="header">
       <div className="header-left">
         <div className="logo">
-          <span className="logo-icon">🔧</span>
-          <span className="logo-text">Array Compiler Studio</span>
+          <span className="logo-icon">🧠</span>
+          <div className="logo-text-group">
+            <span className="logo-text">Dr. Emad Compiler</span>
+            <span className="logo-tagline">From Code to Execution — Step by Step</span>
+          </div>
         </div>
         
         <div className="status-bar">

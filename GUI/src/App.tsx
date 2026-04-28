@@ -195,6 +195,10 @@ function App() {
           setExecutionSteps(buildExecutionSteps(result.tac))
           setActiveStepIndex(null)
         }
+        // Auto-switch to Console tab if cin input is needed
+        if (result.warnings?.some((w: string) => w.includes('cin'))) {
+          setProblemsPanelHeight(220)
+        }
       } else {
         setStatus('error')
         setCurrentPhase('Failed')

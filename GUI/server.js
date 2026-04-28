@@ -54,6 +54,13 @@ function castValueToType(value, type) {
   }
 }
 
+// Count how many cin >> targets exist in the AST
+function countCinTargets(node) {
+  if (!node) return 0
+  if (node.type === 'Input') return (node.children || []).length
+  return (node.children || []).reduce((sum, c) => sum + countCinTargets(c), 0)
+}
+
 function buildInitialRuntimeState(symbolTable) {
   const env = {}
   if (!symbolTable || typeof symbolTable !== 'object') return env
@@ -111,6 +118,7 @@ function runProgram(ast, symbolTable, stdinText = '') {
     }
     if (t === 'STRING') return String(node.value ?? '')
     if (t === 'CHAR') return String(node.value ?? '').slice(0, 1)
+    if (t === 'EndLine') return '\n'
     if (t === 'ID') return env[node.value]
 
     if (t === 'ArrayAccess') {
@@ -192,7 +200,16 @@ function runProgram(ast, symbolTable, stdinText = '') {
   const readInputForTarget = (targetNode) => {
     const raw = inputTokens[inputPos++]
     if (raw == null) {
-      runtimeWarnings.push('cin requested input but no more console input values were provided.')
+      // cin called but no input provided — warn and use default
+      const varName = targetNode?.type === 'ID'
+        ? targetNode.value
+        : (targetNode?.type === 'ArrayAccess'
+            ? collectArrayAccessInfo(targetNode)?.baseName
+            : '?') ?? '?'
+      runtimeWarnings.push(
+        `cin >> ${varName}: no input value provided. ` +
+        `Enter values in the Console Input box before compiling.`
+      )
       return ''
     }
 
@@ -215,13 +232,32 @@ function runProgram(ast, symbolTable, stdinText = '') {
   const execute = (node) => {
     if (!node) return false
 
-    if (node.type === 'Program' || node.type === 'StmtList') {
+    // ── Program: run globals first, then main ──────────────────────────────
+    if (node.type === 'Program') {
+      const globals = (node.children || []).filter(c => c.type !== 'FunctionDef')
+      const mainFn  = (node.children || []).find(c => c.type === 'FunctionDef')
+
+      // Phase 1: execute all global declarations/assignments
+      for (const g of globals) {
+        execute(g)
+      }
+
+      // Phase 2: execute main()
+      if (mainFn) {
+        const body = mainFn.children?.[2]
+        return execute(body)
+      }
+      return false
+    }
+
+    if (node.type === 'StmtList') {
       for (const child of node.children || []) {
         if (execute(child)) return true
       }
       return false
     }
 
+    // FunctionDef reached directly (no globals case — Program → FunctionDef)
     if (node.type === 'FunctionDef') {
       const body = node.children?.[2]
       return execute(body)
@@ -284,12 +320,16 @@ function runProgram(ast, symbolTable, stdinText = '') {
     }
 
     if (node.type === 'Output') {
-      let line = ''
       for (const expr of node.children || []) {
-        const value = evalExpr(expr)
-        line += String(value)
+        if (expr.type === 'EndLine') {
+          output += '\n'
+        } else {
+          output += String(evalExpr(expr))
+        }
       }
-      output += line + '\n'
+      // Only add automatic newline if the statement had no endl
+      const hasEndl = (node.children || []).some(c => c.type === 'EndLine')
+      if (!hasEndl) output += '\n'
       return false
     }
 
@@ -628,9 +668,21 @@ app.post('/api/compile', async (req, res) => {
     // Optional lightweight runtime simulation for cout/cin.
     if (errors.length === 0 && phases.codegen && (ast || annotatedAst)) {
       try {
-        const runtime = runProgram(ast || annotatedAst, symbolTable, stdin)
+        const astToRun = ast || annotatedAst
+        const requiredInputs = countCinTargets(astToRun)
+        const providedInputs = (stdin || '').trim().split(/\s+/).filter(Boolean).length
+
+        const runtime = runProgram(astToRun, symbolTable, stdin)
         consoleOutput = runtime.output
         warnings.push(...runtime.warnings)
+
+        // Inform the UI if cin needs input that wasn't provided
+        if (requiredInputs > 0 && providedInputs < requiredInputs) {
+          warnings.unshift(
+            `This program uses cin (${requiredInputs} input value${requiredInputs > 1 ? 's' : ''} expected). ` +
+            `Enter values in the Console Input box and compile again.`
+          )
+        }
       } catch (runtimeErr) {
         runtimeError = `Runtime simulation failed: ${runtimeErr.message || runtimeErr}`
         warnings.push(runtimeError)
