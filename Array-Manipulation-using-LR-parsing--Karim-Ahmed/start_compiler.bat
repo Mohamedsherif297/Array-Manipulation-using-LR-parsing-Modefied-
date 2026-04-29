@@ -7,11 +7,20 @@ echo Starting the compiler system...
 echo.
 
 REM Check if Main.exe exists
-if not exist "Array-Manipulation-using-LR-parsing--Karim-Ahmed\Main.exe" (
+if not exist "%~dp0Array-Manipulation-using-LR-parsing--Karim-Ahmed\Main.exe" (
     echo Compiling the main compiler...
-    cd Array-Manipulation-using-LR-parsing--Karim-Ahmed
+    pushd "%~dp0Array-Manipulation-using-LR-parsing--Karim-Ahmed"
     call compile_main_only.bat
-    cd ..
+    popd
+    echo.
+)
+
+REM Check if node_modules exists, install if missing
+if not exist "%~dp0GUI\node_modules" (
+    echo node_modules not found. Running npm install...
+    pushd "%~dp0GUI"
+    cmd /c "npm install"
+    popd
     echo.
 )
 
@@ -20,15 +29,15 @@ echo.
 echo Backend will run on: http://localhost:3003
 echo Frontend will run on: http://localhost:3000
 echo.
-echo Press Ctrl+C to stop the servers
+echo Press Ctrl+C in each window to stop the servers
 echo.
 
 REM Start backend server in new window
-start "Backend Server" cmd /k "cd GUI && node server.js"
+start "Backend Server" cmd /k "cd /d "%~dp0GUI" && node server.js"
 timeout /t 3 /nobreak >nul
 
-REM Start frontend server in new window  
-start "Frontend Server" cmd /k "cd GUI && npm run dev"
+REM Start frontend server in new window
+start "Frontend Server" cmd /k "cd /d "%~dp0GUI" && npm run dev"
 timeout /t 3 /nobreak >nul
 
 REM Open browser
