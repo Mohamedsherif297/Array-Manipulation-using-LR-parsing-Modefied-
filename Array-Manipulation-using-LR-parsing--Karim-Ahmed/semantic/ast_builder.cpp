@@ -42,6 +42,22 @@ static string parseString(const string& s, size_t& pos) {
     return result;
 }
 
+static string parseValue(const string& s, size_t& pos) {
+    // Parse either a string (quoted) or a number
+    skipWhitespace(s, pos);
+    if (pos < s.size() && s[pos] == '"') {
+        return parseString(s, pos);
+    } else {
+        // Parse a number
+        string result;
+        while (pos < s.size() && (isdigit(s[pos]) || s[pos] == '-' || s[pos] == '.')) {
+            result += s[pos];
+            ++pos;
+        }
+        return result;
+    }
+}
+
 // Forward declaration
 static shared_ptr<ASTNode> parseObject(const string& s, size_t& pos);
 
@@ -66,6 +82,13 @@ static shared_ptr<ASTNode> parseObject(const string& s, size_t& pos) {
     // pos is on '{'
     ++pos;
     auto node = make_shared<ASTNode>();
+    
+    // Temporary storage for special fields
+    string arrayField;
+    shared_ptr<ASTNode> indexNode;
+    shared_ptr<ASTNode> leftNode;
+    shared_ptr<ASTNode> rightNode;
+    string operatorField;
 
     skipWhitespace(s, pos);
     while (pos < s.size() && s[pos] != '}') {
@@ -79,9 +102,40 @@ static shared_ptr<ASTNode> parseObject(const string& s, size_t& pos) {
         if (key == "type") {
             node->type = parseString(s, pos);
         } else if (key == "value") {
-            node->value = parseString(s, pos);
+            node->value = parseValue(s, pos);
+        } else if (key == "line") {
+            // Parse line number
+            skipWhitespace(s, pos);
+            string lineStr;
+            while (pos < s.size() && isdigit(s[pos])) {
+                lineStr += s[pos++];
+            }
+            if (!lineStr.empty()) {
+                node->line = stoi(lineStr);
+            }
         } else if (key == "children") {
             node->children = parseArray(s, pos);
+        } else if (key == "array") {
+            // ArrayAccess: store array name
+            arrayField = parseString(s, pos);
+        } else if (key == "index") {
+            // ArrayAccess: store index node
+            if (pos < s.size() && s[pos] == '{') {
+                indexNode = parseObject(s, pos);
+            }
+        } else if (key == "left") {
+            // BinaryOp: store left node
+            if (pos < s.size() && s[pos] == '{') {
+                leftNode = parseObject(s, pos);
+            }
+        } else if (key == "right") {
+            // BinaryOp: store right node
+            if (pos < s.size() && s[pos] == '{') {
+                rightNode = parseObject(s, pos);
+            }
+        } else if (key == "operator") {
+            // BinaryOp: store operator
+            operatorField = parseString(s, pos);
         } else {
             // Unknown key — skip its value (string or nested object/array)
             if (pos < s.size() && s[pos] == '"') {
@@ -106,6 +160,29 @@ static shared_ptr<ASTNode> parseObject(const string& s, size_t& pos) {
         skipWhitespace(s, pos);
     }
     if (pos < s.size()) ++pos; // skip '}'
+    
+    // Convert special fields to children format
+    if (node->type == "ArrayAccess" && !arrayField.empty() && indexNode) {
+        // Convert to children format: children[0] = ID node, children[1] = index
+        auto idNode = make_shared<ASTNode>();
+        idNode->type = "ID";
+        idNode->value = arrayField;
+        node->children.push_back(idNode);
+        node->children.push_back(indexNode);
+    }
+    
+    if (node->type == "BinaryOp" && leftNode && rightNode) {
+        // Convert to children format: children[0] = left, children[1] = operator, children[2] = right
+        node->children.push_back(leftNode);
+        
+        auto opNode = make_shared<ASTNode>();
+        opNode->type = operatorField;
+        opNode->value = operatorField;
+        node->children.push_back(opNode);
+        
+        node->children.push_back(rightNode);
+    }
+    
     return node;
 }
 

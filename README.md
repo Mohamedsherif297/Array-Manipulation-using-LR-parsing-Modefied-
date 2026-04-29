@@ -1,133 +1,192 @@
-# Array Manipulation Compiler
+# Array Manipulation Compiler with LR Parsing
 
-A complete compiler implementation with **LR(1) parsing**, **semantic analysis**, and **code generation** for array manipulation programs. Includes a modern **React-based GUI** with syntax highlighting and visual output.
-
-## 🎯 Features
-
-- ✅ Full LR(1) parser with canonical collection
-- ✅ Lexical analysis with token generation
-- ✅ Semantic analysis with type checking
-- ✅ Symbol table management
-- ✅ Three-Address Code (TAC) generation
-- ✅ Support for 1D and 2D arrays
-- ✅ **Modern Web GUI** with Monaco Editor
-- ✅ **Visual AST representation**
-- ✅ **Interactive Symbol Table**
-- ✅ **Formatted TAC output**
+A complete compiler implementation for array manipulation using LR parsing, featuring a modern web-based GUI interface.
 
 ## 🚀 Quick Start
 
-### Using the GUI (Recommended)
+### Prerequisites
+- **Node.js** (v16 or higher)
+- **g++** compiler with C++17 support
+- **npm** package manager
 
+### 1. Setup Dependencies
 ```bash
 cd GUI
-./setup.sh
-npm start
+npm install
 ```
 
-Then open **http://localhost:3000** in your browser.
-
-See [GUI/QUICKSTART.md](GUI/QUICKSTART.md) for detailed instructions.
-
-### Using Command Line
-
+### 2. Compile the Compiler
 ```bash
 cd Array-Manipulation-using-LR-parsing--Karim-Ahmed
-g++ -std=c++17 Main.cpp -o Main
-./Main
+compile_main_only.bat
 ```
 
-See [Array-Manipulation-using-LR-parsing--Karim-Ahmed/README.md](Array-Manipulation-using-LR-parsing--Karim-Ahmed/README.md) for full CLI documentation.
+### 3. Start the System
 
-## 📁 Project Structure
-
-```
-.
-├── GUI/                                    # React-based Web Interface
-│   ├── src/
-│   │   ├── components/                    # React components
-│   │   │   ├── CodeEditor.tsx            # Monaco editor
-│   │   │   ├── ASTVisualizer.tsx         # AST tree view
-│   │   │   ├── SymbolTableView.tsx       # Symbol table display
-│   │   │   └── TACView.tsx               # TAC output
-│   │   └── App.tsx                        # Main app
-│   ├── server.js                          # Express API server
-│   └── README.md                          # GUI documentation
-│
-└── Array-Manipulation-using-LR-parsing--Karim-Ahmed/
-    ├── lexer/                             # Phase 1: Lexical Analysis
-    ├── parser/                            # Phase 2: Syntax Analysis
-    ├── semantic/                          # Phase 3: Semantic Analysis
-    ├── codegen/                           # Phase 4: Code Generation
-    └── Main.cpp                           # CLI entry point
+#### Option A: Manual Start (Recommended)
+**Terminal 1 - Backend Server:**
+```bash
+cd GUI
+node server.js
 ```
 
-## 🎨 GUI Screenshots
-
-The GUI provides:
-- **Code Editor**: VS Code-like editor with syntax highlighting
-- **AST Visualization**: Interactive tree view of parsed code
-- **Symbol Table**: Tabular display of variables and types
-- **TAC Output**: Formatted intermediate code representation
-
-## 💻 Supported Syntax
-
-```cpp
-// Variable declarations
-int x;
-float y;
-
-// Array declarations
-int arr[5];
-int matrix[2][3];
-
-// Assignments
-x = 5;
-arr[0] = 10;
-
-// Declaration with initialization
-int x = 5;
-int arr[2] = {1, 2};
-int m[2][2] = {{1,2},{3,4}};
-
-// Expressions
-x = a + b * c;
-y = arr[i] + 5;
+**Terminal 2 - Frontend GUI:**
+```bash
+cd GUI
+npm run dev
 ```
 
-## 📚 Documentation
+#### Option B: Quick Start Script
+```bash
+# Double-click this file or run:
+start_compiler.bat
+```
 
-- **[GUI/README.md](GUI/README.md)** - Web interface documentation
-- **[GUI/QUICKSTART.md](GUI/QUICKSTART.md)** - Get started in 3 minutes
-- **[GUI/FEATURES.md](GUI/FEATURES.md)** - Complete feature list
-- **[Array-Manipulation-using-LR-parsing--Karim-Ahmed/README.md](Array-Manipulation-using-LR-parsing--Karim-Ahmed/README.md)** - Compiler documentation
-- **[Array-Manipulation-using-LR-parsing--Karim-Ahmed/CFG.md](Array-Manipulation-using-LR-parsing--Karim-Ahmed/CFG.md)** - Grammar specification
+### 4. Access the GUI
+Open your browser and navigate to: **http://localhost:3000**
 
-## 🛠️ Technology Stack
+## 📋 Usage Guide
 
-### Compiler (C++)
-- C++17
-- LR(1) parsing algorithm
-- JSON output format
+### Supported Syntax
+The compiler supports array manipulation with the following syntax:
 
-### GUI (Web)
-- React 18 + TypeScript
-- Monaco Editor (VS Code's editor)
-- Vite (build tool)
-- Express (API server)
+```c
+// Array declarations with initialization
+int x[2] = {1, 2};
+int y[3] = {10, 20, 30};
 
-## 📖 Learning Resources
+// Scalar variables
+int a = x[0];
+int b = y[1];
 
-Each compiler phase has detailed documentation:
-1. **lexer/** - Tokenization and lexical analysis
-2. **parser/** - LR(1) parsing and AST generation
-3. **semantic/** - Type checking and semantic analysis
-4. **codegen/** - Intermediate code generation
+// Complex expressions
+int z[5] = {2 + x[0], 4 + x[1], 3, 4, 5};
+```
 
-## 🤝 Contributing
+### GUI Features
+1. **Code Editor** - Enter your source code
+2. **AST Viewer** - View the Abstract Syntax Tree
+3. **Symbol Table** - See all declared variables with types and array information
+4. **Three-Address Code** - View generated intermediate code
 
-This is an educational project demonstrating compiler design principles.
+### Compilation Pipeline
+The compiler processes code through 5 phases:
+1. **Lexical Analysis** - Tokenization
+2. **Syntax Analysis** - LR(1) parsing and AST generation
+3. **Semantic Analysis** - Type checking and symbol table generation
+4. **Code Generation** - Three-address code generation
+5. **Code Optimization** - Constant folding, dead code elimination
+
+## 🏗️ Project Structure
+
+```
+├── Array-Manipulation-using-LR-parsing--Karim-Ahmed/
+│   ├── Main.cpp                    # Main compiler executable
+│   ├── Main.exe                    # Compiled main program
+│   ├── compile_main_only.bat       # Compilation script
+│   ├── lexer/                      # Lexical analyzer
+│   ├── parser/                     # LR(1) parser implementation
+│   ├── semantic/                   # Semantic analyzer
+│   ├── codegen/                    # Code generator
+│   └── optimizer/                  # Code optimizer
+├── GUI/
+│   ├── server.js                   # Express backend server
+│   ├── package.json                # Node.js dependencies
+│   ├── vite.config.ts              # Frontend configuration
+│   ├── src/                        # React frontend source
+│   └── temp/                       # Temporary compilation files
+└── start_compiler.bat              # Quick start script
+```
+
+## 🔧 Configuration
+
+### Server Ports
+- **Backend API**: http://localhost:3003
+- **Frontend GUI**: http://localhost:3000
+
+### Changing Ports
+If you need to change ports due to conflicts:
+
+1. **Backend Port** - Edit `GUI/server.js`:
+   ```javascript
+   const PORT = 3003  // Change this
+   ```
+
+2. **Frontend Proxy** - Edit `GUI/vite.config.ts`:
+   ```javascript
+   proxy: {
+     '/api': {
+       target: 'http://localhost:3003',  // Match backend port
+       changeOrigin: true
+     }
+   }
+   ```
+
+## 🛠️ Development
+
+### Recompiling Components
+If you modify the compiler source code:
+
+```bash
+# Recompile main compiler
+cd Array-Manipulation-using-LR-parsing--Karim-Ahmed
+compile_main_only.bat
+
+# Recompile individual components
+cd semantic && g++ -std=c++17 -o semantic_main.exe *.cpp
+cd codegen && g++ -std=c++17 -o codegen.exe *.cpp
+cd optimizer && g++ -std=c++17 -o optimizer.exe *.cpp
+```
+
+### Frontend Development
+```bash
+cd GUI
+npm run dev    # Development server with hot reload
+npm run build  # Production build
+```
+
+## 📝 Example Usage
+
+1. Start the system using the quick start guide above
+2. Open http://localhost:3000 in your browser
+3. Enter this example code:
+   ```c
+   int x[2] = {1, 2};
+   int y = x[0];
+   int z[3] = {x[0] + x[1], 5, 10};
+   ```
+4. Click "Compile" to see the results in all tabs
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Port Already in Use:**
+- Kill existing Node.js processes: `taskkill /F /IM node.exe`
+- Or change ports in configuration
+
+**Compilation Errors:**
+- Ensure g++ is installed and in PATH
+- Check that all source files are present
+- Run `compile_main_only.bat` to recompile
+
+**GUI Not Loading:**
+- Check that both servers are running
+- Verify ports are not blocked by firewall
+- Check browser console for errors
+
+**Empty Results:**
+- Ensure Main.exe exists in the compiler directory
+- Check server logs for compilation errors
+- Verify input syntax is correct
+
+### Getting Help
+If you encounter issues:
+1. Check the browser console for frontend errors
+2. Check the terminal running the backend for server errors
+3. Ensure all prerequisites are installed
+4. Try recompiling the compiler components
 
 ## 📄 License
 
-Educational project for compiler design course.
+This project is for educational purposes. See individual component licenses for details.

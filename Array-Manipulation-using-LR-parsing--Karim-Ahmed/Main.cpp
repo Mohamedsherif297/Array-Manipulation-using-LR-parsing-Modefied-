@@ -21,13 +21,31 @@ void printTestCase(const string& code) {
     cout << "   \"" << code << "\"\n";
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     
     printSeparator("COMPILER PIPELINE TEST");
     
-    // Read source code from stdin if available, otherwise use default
+    // Read source code from file argument, stdin, or use default
     string src;
-    if (!isatty(fileno(stdin))) {
+    
+    if (argc > 1) {
+        // Read from file specified as argument
+        ifstream inputFile(argv[1]);
+        if (inputFile) {
+            string line;
+            while (getline(inputFile, line)) {
+                src += line + "\n";
+            }
+            inputFile.close();
+            // Remove trailing newline
+            if (!src.empty() && src.back() == '\n') {
+                src.pop_back();
+            }
+        } else {
+            cerr << "Error: Cannot open input file: " << argv[1] << "\n";
+            return 1;
+        }
+    } else if (!isatty(fileno(stdin))) {
         // Input is piped, read all lines from stdin
         string line;
         while (getline(cin, line)) {
@@ -82,30 +100,34 @@ int main() {
     buildParsingTable();
     cout << "   ✓ Parsing tables generated\n";
 
-    vector<pair<string,string>> input;
+    vector<tuple<string,string,int>> input;
 
     for (auto &t : tokens) {
+        int lineNum = t.getLineNumber();
         switch (t.getType()) {
             case TokenType::DATATYPE:
-                input.push_back({t.getLexeme(), t.getLexeme()});
+                input.push_back(make_tuple(t.getLexeme(), t.getLexeme(), lineNum));
+                break;
+            case TokenType::RESERVED:
+                input.push_back(make_tuple(t.getLexeme(), t.getLexeme(), lineNum));
                 break;
             case TokenType::IDENTIFIER:
-                input.push_back({"ID", t.getLexeme()});
+                input.push_back(make_tuple("ID", t.getLexeme(), lineNum));
                 break;
             case TokenType::CONSTANT:
-                input.push_back({"NUM", t.getLexeme()});
+                input.push_back(make_tuple("NUM", t.getLexeme(), lineNum));
                 break;
             case TokenType::STRING:
-                input.push_back({"STRING", t.getLexeme()});
+                input.push_back(make_tuple("STRING", t.getLexeme(), lineNum));
                 break;
             case TokenType::CHAR:
-                input.push_back({"CHAR", t.getLexeme()});
+                input.push_back(make_tuple("CHAR", t.getLexeme(), lineNum));
                 break;
             case TokenType::END_OF_FILE:
-                input.push_back({"$", "$"});
+                input.push_back(make_tuple("$", "$", lineNum));
                 break;
             default:
-                input.push_back({t.getLexeme(), t.getLexeme()});
+                input.push_back(make_tuple(t.getLexeme(), t.getLexeme(), lineNum));
                 break;
         }
     }
@@ -115,6 +137,7 @@ int main() {
 
     if (!root) {
         cout << "❌ Parsing failed!\n";
+        cout << "   The code contains syntax errors. Please fix them and try again.\n";
         return 1;
     }
 
@@ -127,6 +150,32 @@ int main() {
     printJSON(root, 0, &astFile);
     astFile.close();
 
+    // Write parse trace to JSON for GUI visualization
+    ofstream traceFile("parse_trace.json");
+    if (traceFile) {
+        traceFile << "[\n";
+        for (size_t i = 0; i < parseTrace.size(); ++i) {
+            const auto& step = parseTrace[i];
+            // Escape backslashes and quotes in strings
+            auto esc = [](const string& s) {
+                string out;
+                for (char c : s) {
+                    if (c == '"') out += "\\\"";
+                    else if (c == '\\') out += "\\\\";
+                    else out += c;
+                }
+                return out;
+            };
+            traceFile << "  {\"stack\":\"" << esc(step.stack)
+                      << "\",\"input\":\"" << esc(step.input)
+                      << "\",\"action\":\"" << esc(step.action) << "\"}";
+            if (i + 1 < parseTrace.size()) traceFile << ",";
+            traceFile << "\n";
+        }
+        traceFile << "]\n";
+        traceFile.close();
+    }
+
     cout << "✅ Parsing successful!\n";
     cout << "   AST saved to: ast.json\n";
 
@@ -136,7 +185,7 @@ int main() {
     printSeparator("PHASE 3: SEMANTIC ANALYSIS");
     
     cout << "Running semantic analyzer...\n";
-    int semanticResult = system("cd semantic && ./semantic_main ../ast.json . 2>&1");
+    int semanticResult = system("semantic\\semantic_main.exe ast.json semantic 2>&1");
     
     if (semanticResult != 0) {
         cout << "\n⚠️  Semantic analyzer not compiled or failed.\n";
@@ -153,7 +202,7 @@ int main() {
     printSeparator("PHASE 4: CODE GENERATION");
     
     cout << "Running code generator...\n";
-    int codegenResult = system("cd codegen && ./codegen ../semantic/annotated_ast.json ../semantic/symbol_table.json ir.txt 2>&1");
+    int codegenResult = system("codegen\\codegen.exe semantic\\annotated_ast.json semantic\\symbol_table.json codegen\\ir.txt 2>&1");
     
     if (codegenResult != 0) {
         cout << "\n⚠️  Code generator not compiled or failed.\n";
@@ -182,7 +231,7 @@ int main() {
     printSeparator("PHASE 5: CODE OPTIMIZATION");
     
     cout << "Running optimizer...\n";
-    int optimizerResult = system("cd optimizer && ./optimizer ../codegen/ir.txt optimized_ir.txt 2>&1");
+    int optimizerResult = system("optimizer\\optimizer.exe codegen\\ir.txt optimizer\\optimized_ir.txt 2>&1");
     
     if (optimizerResult != 0) {
         cout << "\n⚠️  Optimizer not compiled or failed.\n";
