@@ -1,0 +1,30 @@
+.code-editor {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Error line highlighting */
+.error-line {
+  background: rgba(244, 135, 113, 0.15) !important;
+}
+
+.error-glyph {
+  background: #f48771;
+  width: 4px !important;
+  margin-left: 3px;
+}
+
+.error-squiggly {
+  border-bottom: 2px wavy #f48771;
+}
+
+/* Highlighted line (for click synchronization) */
+.highlighted-line {
+  background: rgba(102, 126, 234, 0.2) !important;
+}
+
+.highlighted-glyph {
+  background: #667eea;
+  width: 4px !important;
+  margin-left: 3px;
+}

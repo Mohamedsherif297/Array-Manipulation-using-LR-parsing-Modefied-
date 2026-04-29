@@ -1,10 +1,14 @@
 {
+<<<<<<< HEAD
   "z": {
     "type": "int",
     "scope": "function(main)",
     "isArray": false
   },
   "temp": {
+=======
+  "y": {
+>>>>>>> karim-radwan
     "type": "int",
     "scope": "function(main)",
     "isArray": false
@@ -19,6 +23,7 @@
     "scope": "function(main)",
     "isArray": false
   },
+<<<<<<< HEAD
   "arr": {
     "type": "int",
     "scope": "function(main)",
@@ -26,6 +31,8 @@
     "size1": 3,
     "size2": 0
   },
+=======
+>>>>>>> karim-radwan
   "a": {
     "type": "int",
     "scope": "function(main)",

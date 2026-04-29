@@ -126,7 +126,11 @@ inline set<string> terminals = {
 
 "[","]","{","}",",",
 
+<<<<<<< HEAD
 "(",")","return","cout","cin","$"
+=======
+"(",")","return","cout","cin","endl","endLine","$"
+>>>>>>> karim-radwan
 
 };
 

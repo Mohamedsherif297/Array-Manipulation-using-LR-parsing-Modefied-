@@ -295,6 +295,37 @@
   border-color: var(--border-focus);
 }
 
+<<<<<<< HEAD
+=======
+/* Highlight input box when cin values are needed */
+.console-input-area.cin-needed {
+  border-color: var(--accent-warning);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+.console-hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.console-hint strong {
+  color: var(--accent-primary);
+}
+
+.console-output-label {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  margin-top: 10px;
+  margin-bottom: 4px;
+}
+
+.console-dim {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+>>>>>>> karim-radwan
 /* ============================================
    RESPONSIVE
    ============================================ */

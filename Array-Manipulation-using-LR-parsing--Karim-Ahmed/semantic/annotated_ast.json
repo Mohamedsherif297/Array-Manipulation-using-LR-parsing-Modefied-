@@ -1,6 +1,10 @@
 {
   "type": "FunctionDef",
+<<<<<<< HEAD
   "line": 2,
+=======
+  "line": 1,
+>>>>>>> karim-radwan
   "dataType": "int",
   "children": [
     {
@@ -11,16 +15,28 @@
     {
       "type": "ID",
       "value": "main",
+<<<<<<< HEAD
       "line": 2,
+=======
+      "line": 1,
+>>>>>>> karim-radwan
       "dataType": "int"
     },
     {
       "type": "StmtList",
+<<<<<<< HEAD
       "line": 4,
       "children": [
         {
           "type": "DeclAssign",
           "line": 4,
+=======
+      "line": 2,
+      "children": [
+        {
+          "type": "Declaration",
+          "line": 2,
+>>>>>>> karim-radwan
           "dataType": "int",
           "semanticInfo": "declared_here",
           "children": [
@@ -32,6 +48,7 @@
             {
               "type": "ID",
               "value": "a",
+<<<<<<< HEAD
               "line": 4,
               "dataType": "int"
             },
@@ -39,13 +56,21 @@
               "type": "Number",
               "value": "2",
               "line": 4,
+=======
+              "line": 2,
+>>>>>>> karim-radwan
               "dataType": "int"
             }
           ]
         },
         {
+<<<<<<< HEAD
           "type": "DeclAssign",
           "line": 5,
+=======
+          "type": "Declaration",
+          "line": 3,
+>>>>>>> karim-radwan
           "dataType": "int",
           "semanticInfo": "declared_here",
           "children": [
@@ -57,6 +82,7 @@
             {
               "type": "ID",
               "value": "b",
+<<<<<<< HEAD
               "line": 5,
               "dataType": "int"
             },
@@ -64,13 +90,20 @@
               "type": "Number",
               "value": "3",
               "line": 5,
+=======
+              "line": 3,
+>>>>>>> karim-radwan
               "dataType": "int"
             }
           ]
         },
         {
           "type": "DeclAssign",
+<<<<<<< HEAD
           "line": 7,
+=======
+          "line": 4,
+>>>>>>> karim-radwan
           "dataType": "int",
           "semanticInfo": "declared_here",
           "children": [
@@ -81,6 +114,7 @@
             },
             {
               "type": "ID",
+<<<<<<< HEAD
               "value": "arr",
               "line": 7,
               "dataType": "int"
@@ -133,23 +167,39 @@
               "type": "ID",
               "value": "c",
               "line": 9,
+=======
+              "value": "x",
+              "line": 4,
+>>>>>>> karim-radwan
               "dataType": "int"
             },
             {
               "type": "+",
+<<<<<<< HEAD
               "line": 9,
+=======
+              "line": 4,
+>>>>>>> karim-radwan
               "dataType": "int",
               "children": [
                 {
                   "type": "ID",
                   "value": "a",
+<<<<<<< HEAD
                   "line": 9,
+=======
+                  "line": 4,
+>>>>>>> karim-radwan
                   "dataType": "int"
                 },
                 {
                   "type": "ID",
                   "value": "b",
+<<<<<<< HEAD
                   "line": 9,
+=======
+                  "line": 4,
+>>>>>>> karim-radwan
                   "dataType": "int"
                 }
               ]
@@ -157,6 +207,7 @@
           ]
         },
         {
+<<<<<<< HEAD
           "type": "Assignment",
           "line": 11,
           "dataType": "int",
@@ -191,6 +242,10 @@
         {
           "type": "DeclAssign",
           "line": 13,
+=======
+          "type": "DeclAssign",
+          "line": 5,
+>>>>>>> karim-radwan
           "dataType": "int",
           "semanticInfo": "declared_here",
           "children": [
@@ -201,6 +256,7 @@
             },
             {
               "type": "ID",
+<<<<<<< HEAD
               "value": "temp",
               "line": 13,
               "dataType": "int"
@@ -318,10 +374,15 @@
               "type": "ID",
               "value": "z",
               "line": 17,
+=======
+              "value": "y",
+              "line": 5,
+>>>>>>> karim-radwan
               "dataType": "int"
             },
             {
               "type": "+",
+<<<<<<< HEAD
               "line": 17,
               "dataType": "int",
               "children": [
@@ -362,6 +423,22 @@
                       "dataType": "int"
                     }
                   ]
+=======
+              "line": 5,
+              "dataType": "int",
+              "children": [
+                {
+                  "type": "ID",
+                  "value": "a",
+                  "line": 5,
+                  "dataType": "int"
+                },
+                {
+                  "type": "ID",
+                  "value": "b",
+                  "line": 5,
+                  "dataType": "int"
+>>>>>>> karim-radwan
                 }
               ]
             }
@@ -369,13 +446,21 @@
         },
         {
           "type": "Return",
+<<<<<<< HEAD
           "line": 19,
+=======
+          "line": 6,
+>>>>>>> karim-radwan
           "dataType": "int",
           "children": [
             {
               "type": "Number",
               "value": "0",
+<<<<<<< HEAD
               "line": 19,
+=======
+              "line": 6,
+>>>>>>> karim-radwan
               "dataType": "int"
             }
           ]

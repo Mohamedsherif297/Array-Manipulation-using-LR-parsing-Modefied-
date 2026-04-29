@@ -1,5 +1,6 @@
 // DECL a  type=int
 // DECL b  type=int
+<<<<<<< HEAD
 // DECL arr  type=int
 // DECL c  type=int
 // DECL temp  type=int
@@ -19,3 +20,11 @@ t4 = arr
 t5 = arr
 t6 = t4 + t5
 z = t6
+=======
+// DECL x  type=int
+t1 = a + b
+x = t1
+// DECL y  type=int
+t2 = t1
+y = t2
+>>>>>>> karim-radwan

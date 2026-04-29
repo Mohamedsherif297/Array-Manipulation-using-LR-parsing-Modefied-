@@ -1,4 +1,5 @@
 // DECL a  type=int
+<<<<<<< HEAD
 a = 2
 // DECL b  type=int
 b = 3
@@ -21,3 +22,12 @@ t4 = arr[0]
 t5 = arr[1]
 t6 = t4 + t5
 z = t6
+=======
+// DECL b  type=int
+// DECL x  type=int
+t1 = a + b
+x = t1
+// DECL y  type=int
+t2 = a + b
+y = t2
+>>>>>>> karim-radwan
