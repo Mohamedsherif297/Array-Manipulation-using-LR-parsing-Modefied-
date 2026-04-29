@@ -1,0 +1,22 @@
+{
+  "y": {
+    "type": "int",
+    "scope": "function(main)",
+    "isArray": false
+  },
+  "x": {
+    "type": "int",
+    "scope": "function(main)",
+    "isArray": false
+  },
+  "b": {
+    "type": "int",
+    "scope": "function(main)",
+    "isArray": false
+  },
+  "a": {
+    "type": "int",
+    "scope": "function(main)",
+    "isArray": false
+  }
+}
