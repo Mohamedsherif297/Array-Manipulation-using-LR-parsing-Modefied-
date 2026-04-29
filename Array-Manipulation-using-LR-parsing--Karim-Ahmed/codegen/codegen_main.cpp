@@ -70,6 +70,7 @@ int main(int argc, char* argv[]) {
 
     if (!ok) {
         cerr << "[CodeGen] Code generation completed with errors.\n";
+        cerr << "[CodeGen] Check error messages above for details.\n";
     } else {
         cout << "[CodeGen] Code generation successful. "
              << cg.getIR().size() << " quad(s) generated.\n";

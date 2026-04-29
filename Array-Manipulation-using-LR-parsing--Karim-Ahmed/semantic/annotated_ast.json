@@ -1,70 +1,149 @@
 {
-  "type": "Program",
-  "dataType": "void",
+  "type": "FunctionDef",
+  "line": 1,
+  "dataType": "int",
   "children": [
     {
-      "type": "DeclAssign",
-      "dataType": "int",
-      "semanticInfo": "declared_here",
-      "children": [
-        {
-          "type": "int",
-          "value": "int",
-          "dataType": "int"
-        },
-        {
-          "type": "ID",
-          "value": "x",
-          "dataType": "int"
-        },
-        {
-          "type": "NUM",
-          "value": "5",
-          "dataType": "int"
-        }
-      ]
+      "type": "DATATYPE",
+      "value": "int",
+      "dataType": "int"
     },
     {
-      "type": "DeclAssign",
-      "dataType": "int",
-      "semanticInfo": "declared_here",
-      "children": [
-        {
-          "type": "int",
-          "value": "int",
-          "dataType": "int"
-        },
-        {
-          "type": "ID",
-          "value": "y",
-          "dataType": "int"
-        },
-        {
-          "type": "NUM",
-          "value": "6",
-          "dataType": "int"
-        }
-      ]
+      "type": "ID",
+      "value": "main",
+      "line": 1,
+      "dataType": "int"
     },
     {
-      "type": "DeclAssign",
-      "dataType": "int",
-      "semanticInfo": "declared_here",
+      "type": "StmtList",
+      "line": 2,
       "children": [
         {
-          "type": "int",
-          "value": "int",
-          "dataType": "int"
+          "type": "Declaration",
+          "line": 2,
+          "dataType": "int",
+          "semanticInfo": "declared_here",
+          "children": [
+            {
+              "type": "DATATYPE",
+              "value": "int",
+              "dataType": "int"
+            },
+            {
+              "type": "ID",
+              "value": "a",
+              "line": 2,
+              "dataType": "int"
+            }
+          ]
         },
         {
-          "type": "ID",
-          "value": "z",
-          "dataType": "int"
+          "type": "Declaration",
+          "line": 3,
+          "dataType": "int",
+          "semanticInfo": "declared_here",
+          "children": [
+            {
+              "type": "DATATYPE",
+              "value": "int",
+              "dataType": "int"
+            },
+            {
+              "type": "ID",
+              "value": "b",
+              "line": 3,
+              "dataType": "int"
+            }
+          ]
         },
         {
-          "type": "ID",
-          "value": "x",
-          "dataType": "int"
+          "type": "DeclAssign",
+          "line": 4,
+          "dataType": "int",
+          "semanticInfo": "declared_here",
+          "children": [
+            {
+              "type": "DATATYPE",
+              "value": "int",
+              "dataType": "int"
+            },
+            {
+              "type": "ID",
+              "value": "x",
+              "line": 4,
+              "dataType": "int"
+            },
+            {
+              "type": "+",
+              "line": 4,
+              "dataType": "int",
+              "children": [
+                {
+                  "type": "ID",
+                  "value": "a",
+                  "line": 4,
+                  "dataType": "int"
+                },
+                {
+                  "type": "ID",
+                  "value": "b",
+                  "line": 4,
+                  "dataType": "int"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "DeclAssign",
+          "line": 5,
+          "dataType": "int",
+          "semanticInfo": "declared_here",
+          "children": [
+            {
+              "type": "DATATYPE",
+              "value": "int",
+              "dataType": "int"
+            },
+            {
+              "type": "ID",
+              "value": "y",
+              "line": 5,
+              "dataType": "int"
+            },
+            {
+              "type": "+",
+              "line": 5,
+              "dataType": "int",
+              "children": [
+                {
+                  "type": "ID",
+                  "value": "a",
+                  "line": 5,
+                  "dataType": "int"
+                },
+                {
+                  "type": "ID",
+                  "value": "b",
+                  "line": 5,
+                  "dataType": "int"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Return",
+          "line": 6,
+          "dataType": "int",
+          "children": [
+            {
+              "type": "Number",
+              "value": "0",
+              "line": 6,
+              "dataType": "int"
+            }
+          ]
         }
       ]
     }

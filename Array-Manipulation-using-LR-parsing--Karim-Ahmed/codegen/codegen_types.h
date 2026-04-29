@@ -26,9 +26,10 @@ struct Quad {
     string arg1;    // first operand  (may be empty)
     string arg2;    // second operand (may be empty)
     string result;  // destination    (may be empty for some ops)
+    int    sourceLine = 0;  // source code line number (0 = unknown)
 
-    Quad(string op, string arg1, string arg2, string result)
-        : op(move(op)), arg1(move(arg1)), arg2(move(arg2)), result(move(result)) {}
+    Quad(string op, string arg1, string arg2, string result, int sourceLine = 0)
+        : op(move(op)), arg1(move(arg1)), arg2(move(arg2)), result(move(result)), sourceLine(sourceLine) {}
 };
 
 // The complete IR for a compilation unit
