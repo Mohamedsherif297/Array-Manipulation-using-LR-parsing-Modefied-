@@ -1,108 +1,192 @@
-# Array-Manipulation-using-LR-parsing-
-This project involves developing a C++ application designed to parse and execute array manipulation commands. It serves as a practical implementation of the Compiler Design Phases discussed in the course, specifically focusing on syntax and semantic analysis.
+# Array Manipulation Compiler with LR Parsing
 
-## Project Structure
+A complete compiler implementation for array manipulation using LR parsing, featuring a modern web-based GUI interface.
 
-```
-Array-Manipulation-using-LR-parsing--Karim-Ahmed/
-├── lexer/              # Phase 1: Lexical Analysis
-│   ├── Token_Class.h
-│   ├── Symbol_Table.h
-│   ├── Lexer.h
-│   └── README.md
-│
-├── parser/             # Phase 2: Syntax Analysis (LR(1) Parser)
-│   ├── Grammar.h
-│   ├── Item.h
-│   ├── Item.cpp
-│   ├── First_Set.h
-│   ├── Parser_States.cpp
-│   ├── Parsing_Table.cpp
-│   ├── Parser.h
-│   └── README.md
-│
-├── semantic/           # Phase 3: Semantic Analysis
-│   ├── ASTNode.h
-│   ├── ast_builder.h/cpp
-│   ├── symbol_table.h/cpp
-│   ├── semantic_analyzer.h/cpp
-│   ├── semantic_output.h/cpp
-│   ├── semantic_main.cpp
-│   └── README.md
-│
-├── codegen/            # Phase 4: Code Generation (TAC)
-│   ├── codegen_types.h
-│   ├── ast_loader.h/cpp
-│   ├── symbol_table_loader.h/cpp
-│   ├── code_generator.h/cpp
-│   ├── codegen_main.cpp
-│   ├── Makefile
-│   └── README.md
-│
-├── Main.cpp            # Main entry point (integrates all phases)
-├── CFG.md              # Context-Free Grammar documentation
-└── To_do_list.md       # Project progress tracker
-```
+## 🚀 Quick Start
 
-## Compilation Pipeline
+### Prerequisites
+- **Node.js** (v16 or higher)
+- **g++** compiler with C++17 support
+- **npm** package manager
 
-```
-Source Code
-    ↓
-[Lexer] → Tokens
-    ↓
-[Parser] → AST (ast.json)
-    ↓
-[Semantic Analyzer] → Annotated AST + Symbol Table
-    ↓
-[Code Generator] → Three-Address Code (IR)
-```
-
-## Quick Start
-
-### Compile and Run Main Program
+### 1. Setup Dependencies
 ```bash
-g++ -std=c++17 Main.cpp -o Main
-./Main
+cd GUI
+npm install
 ```
 
-### Run Individual Phases
-
-**Semantic Analysis:**
+### 2. Compile the Compiler
 ```bash
-cd semantic
-g++ -std=c++17 semantic_main.cpp ast_builder.cpp semantic_analyzer.cpp semantic_output.cpp symbol_table.cpp -o semantic_main
-./semantic_main ../ast.json .
+cd Array-Manipulation-using-LR-parsing--Karim-Ahmed
+compile_main_only.bat
 ```
 
-**Code Generation:**
+### 3. Start the System
+
+#### Option A: Manual Start (Recommended)
+**Terminal 1 - Backend Server:**
 ```bash
-cd codegen
-make
-./codegen ../semantic/annotated_ast.json ../semantic/symbol_table.json ir.txt
+cd GUI
+node server.js
 ```
 
-## Features
+**Terminal 2 - Frontend GUI:**
+```bash
+cd GUI
+npm run dev
+```
 
-- ✅ Full LR(1) parser with canonical collection
-- ✅ FIRST set computation
-- ✅ Closure and GOTO operations
-- ✅ Parsing table construction with conflict detection
-- ✅ AST generation
-- ✅ Semantic analysis with type checking
-- ✅ Symbol table management
-- ✅ Intermediate code generation (TAC)
-- ✅ Support for 1D and 2D arrays
-- ✅ Expression evaluation with operator precedence
+#### Option B: Quick Start Script
+```bash
+# Double-click this file or run:
+start_compiler.bat
+```
 
-## Supported Language Features
+### 4. Access the GUI
+Open your browser and navigate to: **http://localhost:3000**
 
-- Variable declarations: `int x;`, `float arr[5];`
-- Array declarations: `int matrix[2][3];`
-- Assignments: `x = 5;`, `arr[0] = 10;`
-- Declaration with initialization: `int x = 5;`
-- Array initialization: `int arr[2] = {1, 2};`
-- 2D array initialization: `int m[2][2] = {{1,2},{3,4}};`
-- Arithmetic expressions: `x = a + b * c;`
-- Array element access: `arr[i]`, `matrix[i][j]`
+## 📋 Usage Guide
 
+### Supported Syntax
+The compiler supports array manipulation with the following syntax:
+
+```c
+// Array declarations with initialization
+int x[2] = {1, 2};
+int y[3] = {10, 20, 30};
+
+// Scalar variables
+int a = x[0];
+int b = y[1];
+
+// Complex expressions
+int z[5] = {2 + x[0], 4 + x[1], 3, 4, 5};
+```
+
+### GUI Features
+1. **Code Editor** - Enter your source code
+2. **AST Viewer** - View the Abstract Syntax Tree
+3. **Symbol Table** - See all declared variables with types and array information
+4. **Three-Address Code** - View generated intermediate code
+
+### Compilation Pipeline
+The compiler processes code through 5 phases:
+1. **Lexical Analysis** - Tokenization
+2. **Syntax Analysis** - LR(1) parsing and AST generation
+3. **Semantic Analysis** - Type checking and symbol table generation
+4. **Code Generation** - Three-address code generation
+5. **Code Optimization** - Constant folding, dead code elimination
+
+## 🏗️ Project Structure
+
+```
+├── Array-Manipulation-using-LR-parsing--Karim-Ahmed/
+│   ├── Main.cpp                    # Main compiler executable
+│   ├── Main.exe                    # Compiled main program
+│   ├── compile_main_only.bat       # Compilation script
+│   ├── lexer/                      # Lexical analyzer
+│   ├── parser/                     # LR(1) parser implementation
+│   ├── semantic/                   # Semantic analyzer
+│   ├── codegen/                    # Code generator
+│   └── optimizer/                  # Code optimizer
+├── GUI/
+│   ├── server.js                   # Express backend server
+│   ├── package.json                # Node.js dependencies
+│   ├── vite.config.ts              # Frontend configuration
+│   ├── src/                        # React frontend source
+│   └── temp/                       # Temporary compilation files
+└── start_compiler.bat              # Quick start script
+```
+
+## 🔧 Configuration
+
+### Server Ports
+- **Backend API**: http://localhost:3003
+- **Frontend GUI**: http://localhost:3000
+
+### Changing Ports
+If you need to change ports due to conflicts:
+
+1. **Backend Port** - Edit `GUI/server.js`:
+   ```javascript
+   const PORT = 3003  // Change this
+   ```
+
+2. **Frontend Proxy** - Edit `GUI/vite.config.ts`:
+   ```javascript
+   proxy: {
+     '/api': {
+       target: 'http://localhost:3003',  // Match backend port
+       changeOrigin: true
+     }
+   }
+   ```
+
+## 🛠️ Development
+
+### Recompiling Components
+If you modify the compiler source code:
+
+```bash
+# Recompile main compiler
+cd Array-Manipulation-using-LR-parsing--Karim-Ahmed
+compile_main_only.bat
+
+# Recompile individual components
+cd semantic && g++ -std=c++17 -o semantic_main.exe *.cpp
+cd codegen && g++ -std=c++17 -o codegen.exe *.cpp
+cd optimizer && g++ -std=c++17 -o optimizer.exe *.cpp
+```
+
+### Frontend Development
+```bash
+cd GUI
+npm run dev    # Development server with hot reload
+npm run build  # Production build
+```
+
+## 📝 Example Usage
+
+1. Start the system using the quick start guide above
+2. Open http://localhost:3000 in your browser
+3. Enter this example code:
+   ```c
+   int x[2] = {1, 2};
+   int y = x[0];
+   int z[3] = {x[0] + x[1], 5, 10};
+   ```
+4. Click "Compile" to see the results in all tabs
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Port Already in Use:**
+- Kill existing Node.js processes: `taskkill /F /IM node.exe`
+- Or change ports in configuration
+
+**Compilation Errors:**
+- Ensure g++ is installed and in PATH
+- Check that all source files are present
+- Run `compile_main_only.bat` to recompile
+
+**GUI Not Loading:**
+- Check that both servers are running
+- Verify ports are not blocked by firewall
+- Check browser console for errors
+
+**Empty Results:**
+- Ensure Main.exe exists in the compiler directory
+- Check server logs for compilation errors
+- Verify input syntax is correct
+
+### Getting Help
+If you encounter issues:
+1. Check the browser console for frontend errors
+2. Check the terminal running the backend for server errors
+3. Ensure all prerequisites are installed
+4. Try recompiling the compiler components
+
+## 📄 License
+
+This project is for educational purposes. See individual component licenses for details.

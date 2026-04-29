@@ -1,0 +1,128 @@
+.ast-visualizer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ast-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.view-btn {
+  background: #2d2d30;
+  color: #cccccc;
+  border: 1px solid #3e3e42;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-btn:hover {
+  background: #3e3e42;
+  color: #ffffff;
+}
+
+.view-btn.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.tree-view {
+  flex: 1;
+  overflow: auto;
+  background: #252526;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #3e3e42;
+}
+
+.tree-node {
+  margin: 0.3rem 0;
+}
+
+.node-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.node-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.expand-icon {
+  color: #858585;
+  font-size: 0.8rem;
+  width: 16px;
+  display: inline-block;
+  user-select: none;
+}
+
+.expand-icon.leaf {
+  font-size: 0.6rem;
+  color: #4ec9b0;
+}
+
+.node-type {
+  color: #4ec9b0;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.node-value {
+  color: #ce9178;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.node-datatype {
+  color: #569cd6;
+  font-size: 0.85rem;
+  background: rgba(86, 156, 214, 0.15);
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+}
+
+.node-semantic {
+  color: #dcdcaa;
+  font-size: 0.85rem;
+  background: rgba(220, 220, 170, 0.15);
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+}
+
+.node-children {
+  border-left: 1px solid #3e3e42;
+  margin-left: 8px;
+}
+
+.json-view {
+  flex: 1;
+  overflow: auto;
+  background: #252526;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #3e3e42;
+  color: #d4d4d4;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.ast-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #858585;
+  font-size: 1.1rem;
+}
