@@ -44,6 +44,8 @@ private:
     void visitOutput(shared_ptr<ASTNode> node);
     void visitInput(shared_ptr<ASTNode> node);
     void visitReturn(shared_ptr<ASTNode> node);
+    void visitForStmt(shared_ptr<ASTNode> node);  // for loop — full semantic validation
+    void visitIncrement(shared_ptr<ASTNode> node); // ++i / i++
     string visitExpr(shared_ptr<ASTNode> node);   // returns resolved type
     string visitArrayAccess(shared_ptr<ASTNode> node);
 

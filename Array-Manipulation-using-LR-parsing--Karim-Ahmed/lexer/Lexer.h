@@ -27,6 +27,48 @@ public:
         vector<Token> tokens;
         size_t n = src.size();
 
+        // ── Pre-pass: strip preprocessor directives and using-declarations ──
+        // Lines starting with # (e.g. #include <...>) and
+        // "using namespace ...;" are valid C++ but outside our grammar.
+        // We remove them before tokenizing so the parser never sees them.
+        {
+            string cleaned;
+            cleaned.reserve(n);
+            size_t pos = 0;
+            while (pos < n) {
+                // Skip leading whitespace to check line start
+                size_t lineStart = pos;
+                // Find the first non-space character on this line
+                size_t nonSpace = pos;
+                while (nonSpace < n && (src[nonSpace] == ' ' || src[nonSpace] == '\t')) nonSpace++;
+
+                bool skipLine = false;
+                // #include, #define, #pragma, etc.
+                if (nonSpace < n && src[nonSpace] == '#') skipLine = true;
+                // using namespace std; (and similar)
+                if (!skipLine && nonSpace + 5 < n && src.substr(nonSpace, 5) == "using") {
+                    // Check the rest of the line for "namespace"
+                    size_t tmp = nonSpace + 5;
+                    while (tmp < n && (src[tmp] == ' ' || src[tmp] == '\t')) tmp++;
+                    if (tmp + 9 <= n && src.substr(tmp, 9) == "namespace") skipLine = true;
+                }
+
+                if (skipLine) {
+                    // Replace the entire line with a newline to preserve line numbers
+                    while (pos < n && src[pos] != '\n') pos++;
+                    cleaned += '\n';
+                    if (pos < n) pos++; // skip the \n itself
+                } else {
+                    // Copy line as-is
+                    while (pos < n && src[pos] != '\n') cleaned += src[pos++];
+                    if (pos < n) { cleaned += '\n'; pos++; }
+                }
+            }
+            src = cleaned;
+            n   = src.size();
+            i   = 0; // reset position
+        }
+
         while (i < n) {
             if (isspace(src[i])) {
                 if (src[i] == '\n') currentLine++;
@@ -57,7 +99,7 @@ public:
                 if (word == "int" || word == "float" || word == "double" || word == "char" || word == "string") {
                     tokens.push_back(Token(TokenType::DATATYPE, word, currentLine));
                     last_type = word; // Update last declared type
-                } else if (word == "return" || word == "cout" || word == "cin" || word == "endl" || word == "endLine") {
+                } else if (word == "return" || word == "cout" || word == "cin" || word == "endl" || word == "endLine" || word == "for") {
                     tokens.push_back(Token(TokenType::RESERVED, word, currentLine));
                 } else {
                     st.addSymbol(word, last_type);
@@ -95,7 +137,36 @@ public:
                 tokens.push_back(Token(TokenType::OPERATOR, ">>", currentLine));
                 continue;
             }
-            
+
+            // Check for ++ (pre/post increment)
+            if (c == '+' && i < n && src[i] == '+') {
+                i++;
+                tokens.push_back(Token(TokenType::OPERATOR, "++", currentLine));
+                continue;
+            }
+
+            // Check for two-character relational operators: >=, <=, ==, !=
+            if (c == '>' && i < n && src[i] == '=') {
+                i++;
+                tokens.push_back(Token(TokenType::OPERATOR, ">=", currentLine));
+                continue;
+            }
+            if (c == '<' && i < n && src[i] == '=') {
+                i++;
+                tokens.push_back(Token(TokenType::OPERATOR, "<=", currentLine));
+                continue;
+            }
+            if (c == '=' && i < n && src[i] == '=') {
+                i++;
+                tokens.push_back(Token(TokenType::OPERATOR, "==", currentLine));
+                continue;
+            }
+            if (c == '!' && i < n && src[i] == '=') {
+                i++;
+                tokens.push_back(Token(TokenType::OPERATOR, "!=", currentLine));
+                continue;
+            }
+
             switch (c) {
                 case '+': case '-': case '*': case '/': case '=': case '<': case '>':
                     tokens.push_back(Token(TokenType::OPERATOR, string(1, c), currentLine)); break;

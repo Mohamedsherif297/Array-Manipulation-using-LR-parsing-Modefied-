@@ -1,39 +1,5 @@
 {
-<<<<<<< HEAD
-  "z": {
-    "type": "int",
-    "scope": "function(main)",
-    "isArray": false
-  },
-  "temp": {
-=======
-  "y": {
->>>>>>> karim-radwan
-    "type": "int",
-    "scope": "function(main)",
-    "isArray": false
-  },
-  "c": {
-    "type": "int",
-    "scope": "function(main)",
-    "isArray": false
-  },
-  "b": {
-    "type": "int",
-    "scope": "function(main)",
-    "isArray": false
-  },
-<<<<<<< HEAD
-  "arr": {
-    "type": "int",
-    "scope": "function(main)",
-    "isArray": true,
-    "size1": 3,
-    "size2": 0
-  },
-=======
->>>>>>> karim-radwan
-  "a": {
+  "x": {
     "type": "int",
     "scope": "function(main)",
     "isArray": false

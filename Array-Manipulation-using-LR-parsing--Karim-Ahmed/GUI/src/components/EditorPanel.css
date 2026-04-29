@@ -24,20 +24,30 @@
 
 .editor-tabs {
   display: flex;
-  gap: 4px;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: 1;
+  min-width: 0;
 }
+
+.editor-tabs::-webkit-scrollbar { display: none; }
 
 .editor-tab {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: 6px;
+  padding: 6px 10px;
   background: transparent;
   color: var(--text-secondary);
-  border-radius: 4px;
+  border-radius: 4px 4px 0 0;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
   font-size: 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border-bottom: 2px solid transparent;
+  max-width: 160px;
 }
 
 .editor-tab:hover {
@@ -48,15 +58,67 @@
 .editor-tab.active {
   background: var(--bg-tertiary);
   color: var(--text-primary);
+  border-bottom-color: var(--accent-primary);
 }
 
-.tab-icon {
-  font-size: 14px;
-  line-height: 1;
+.editor-tab.tab-has-error .tab-label {
+  color: var(--accent-error);
 }
 
 .tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100px;
   font-weight: 500;
+}
+
+.tab-rename-input {
+  background: var(--bg-primary);
+  border: 1px solid var(--accent-primary);
+  border-radius: 3px;
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 1px 4px;
+  width: 90px;
+  outline: none;
+}
+
+.tab-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.tab-close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--accent-error);
+}
+
+.tab-add-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  align-self: center;
+}
+
+.tab-add-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .editor-actions {
@@ -281,7 +343,7 @@
   left: 0;
   right: 0;
   height: 22.4px;
-  pointer-events: auto;
+  pointer-events: none;
   z-index: 2;
 }
 
@@ -290,9 +352,17 @@
   left: 16px;
   right: 16px;
   bottom: 0;
-  height: 0;
+  height: 4px;
   border-bottom: 2px wavy var(--accent-error);
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: default;
+}
+
+.error-squiggle-line:hover + .error-inline-tooltip,
+.error-squiggle-line:hover ~ .error-inline-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .error-inline-tooltip {
@@ -316,7 +386,6 @@
   flex-direction: column;
   gap: 6px;
 }
-
 .error-tooltip-item {
   display: flex;
   align-items: flex-start;

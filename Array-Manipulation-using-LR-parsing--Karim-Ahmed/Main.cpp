@@ -185,7 +185,9 @@ int main(int argc, char* argv[]) {
     printSeparator("PHASE 3: SEMANTIC ANALYSIS");
     
     cout << "Running semantic analyzer...\n";
-    int semanticResult = system("semantic\\semantic_main.exe ast.json semantic 2>&1");
+    int semanticResult = system("semantic/semantic_main.exe ast.json semantic 2>&1");
+    if (semanticResult != 0)
+        semanticResult = system("semantic\\semantic_main.exe ast.json semantic 2>&1");
     
     if (semanticResult != 0) {
         cout << "\n⚠️  Semantic analyzer not compiled or failed.\n";
@@ -202,7 +204,9 @@ int main(int argc, char* argv[]) {
     printSeparator("PHASE 4: CODE GENERATION");
     
     cout << "Running code generator...\n";
-    int codegenResult = system("codegen\\codegen.exe semantic\\annotated_ast.json semantic\\symbol_table.json codegen\\ir.txt 2>&1");
+    int codegenResult = system("codegen/codegen.exe semantic/annotated_ast.json semantic/symbol_table.json codegen/ir.txt 2>&1");
+    if (codegenResult != 0)
+        codegenResult = system("codegen\\codegen.exe semantic\\annotated_ast.json semantic\\symbol_table.json codegen\\ir.txt 2>&1");
     
     if (codegenResult != 0) {
         cout << "\n⚠️  Code generator not compiled or failed.\n";
@@ -231,7 +235,9 @@ int main(int argc, char* argv[]) {
     printSeparator("PHASE 5: CODE OPTIMIZATION");
     
     cout << "Running optimizer...\n";
-    int optimizerResult = system("optimizer\\optimizer.exe codegen\\ir.txt optimizer\\optimized_ir.txt 2>&1");
+    int optimizerResult = system("optimizer/optimizer.exe codegen/ir.txt optimizer/optimized_ir.txt 2>&1");
+    if (optimizerResult != 0)
+        optimizerResult = system("optimizer\\optimizer.exe codegen\\ir.txt optimizer\\optimized_ir.txt 2>&1");
     
     if (optimizerResult != 0) {
         cout << "\n⚠️  Optimizer not compiled or failed.\n";
