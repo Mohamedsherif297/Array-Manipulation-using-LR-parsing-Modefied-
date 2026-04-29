@@ -1,6 +1,8 @@
+// DECL a  type=int
+// DECL b  type=int
 // DECL x  type=int
-x = 5
+t1 = a + b
+x = t1
 // DECL y  type=int
-y = 6
-// DECL z  type=int
-z = 5
+t2 = t1
+y = t2

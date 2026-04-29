@@ -16,7 +16,16 @@ inline vector <Production> grammar = {
 
 {"S'", {"Program"}},
 
-{"Program", {"StmtList"}},
+{"Program", {"GlobalList", "FunctionDef"}},
+{"Program", {"FunctionDef"}},
+
+{"GlobalList", {"GlobalList", "GlobalDecl"}},
+{"GlobalList", {"GlobalDecl"}},
+
+{"GlobalDecl", {"DeclStmt"}},
+{"GlobalDecl", {"DeclAssignStmt"}},
+
+{"FunctionDef", {"Type", "ID", "(", ")", "{", "StmtList", "}"}},
 
 {"StmtList", {"StmtList", "Stmt"}},
 
@@ -27,6 +36,10 @@ inline vector <Production> grammar = {
 {"Stmt", {"AssignStmt"}},
 
 {"Stmt", {"DeclAssignStmt"}},
+
+{"Stmt", {"ReturnStmt"}},
+
+{"Stmt", {"IoStmt"}},
 
 {"DeclStmt", {"Type", "ID", ";"}},
 
@@ -40,63 +53,66 @@ inline vector <Production> grammar = {
 
 {"DeclAssignStmt", {"Type", "ID", "ArrayDims", "=", "ArrayLiteral", ";"}},
 
-{"ArrayLiteral", {"{", "RowList", "}"}},
+{"ReturnStmt", {"return", "Expr", ";"}},
 
-{"RowList", {"RowList", ",", "Row"}},
+{"ReturnStmt", {"return", ";"}},
 
-{"RowList", {"Row"}},
+{"IoStmt", {"cout", "CoutList", ";"}},
+{"IoStmt", {"cin", "CinList", ";"}},
 
-{"Row", {"{", "ExprList", "}"}},
+{"CoutList", {"CoutList", "<<", "Expr"}},
+{"CoutList", {"<<", "Expr"}},
 
-{"Row", {"Expr"}},
+{"CinList", {"CinList", ">>", "InputTarget"}},
+{"CinList", {">>", "InputTarget"}},
+
+{"InputTarget", {"ID"}},
+{"InputTarget", {"ArrayAccess"}},
+
+// ===== ARRAY LITERAL (UPDATED) =====
+{"ArrayLiteral", {"{", "Elements", "}"}}, 
+{"Elements", {"Elements", ",", "Element"}}, 
+{"Elements", {"Element"}}, 
+{"Element", {"Expr"}}, 
+{"Element", {"ArrayLiteral"}},
+
+// ===== ARRAY ACCESS (UPDATED) =====
+{"ArrayAccess", {"ArrayAccess", "[", "Expr", "]"}},
+{"ArrayAccess", {"ID", "[", "Expr", "]"}}, 
+
+// ===== REST (UNCHANGED) =====
 
 {"ExprList", {"ExprList", ",", "Expr"}},
-
 {"ExprList", {"Expr"}},
 
-{"ArrayAccess", {"ID", "[", "Expr", "]"}},
-
 {"ArrayDims", {"ArrayDims", "[", "NUM", "]"}},
-
 {"ArrayDims", {"[", "NUM", "]"}},
+{"ArrayDims", {"[", "]"}},
 
 {"Expr", {"Expr", "+", "Term"}},
-
 {"Expr", {"Expr", "-", "Term"}},
-
 {"Expr", {"Term"}},
 
 {"Term", {"Term", "*", "Factor"}},
-
 {"Term", {"Term", "/", "Factor"}},
-
 {"Term", {"Factor"}},
 
 {"Factor", {"(", "Expr", ")"}},
-
 {"Factor", {"ID"}},
-
 {"Factor", {"NUM"}},
-
 {"Factor", {"ArrayAccess"}},
-
 {"Factor", {"STRING"}},
-
 {"Factor", {"CHAR"}},
+{"Factor", {"endl"}},
+{"Factor", {"endLine"}},
 
 {"Type", {"int"}},
-
 {"Type", {"float"}},
-
 {"Type", {"double"}},
-
 {"Type", {"char"}},
-
 {"Type", {"string"}}
 
 };
-
-  
 
 inline set<string> terminals = {
 
@@ -106,25 +122,27 @@ inline set<string> terminals = {
 
 "+","-","*","/","=",";",
 
+"<<",">>",
+
 "[","]","{","}",",",
 
-"(",")","$"
+"(",")","return","cout","cin","endl","endLine","$"
 
 };
 
-  
-
 inline set<string> nonTerminals = {
 
-"S'","Program","StmtList","Stmt",
+"S'","Program","FunctionDef","GlobalList","GlobalDecl","StmtList","Stmt",
 
-"DeclStmt","AssignStmt","DeclAssignStmt",
+"DeclStmt","AssignStmt","DeclAssignStmt","ReturnStmt",
 
-"ArrayLiteral","RowList","Row","ExprList",
+"IoStmt","CoutList","CinList","InputTarget",
+
+"ArrayLiteral","Elements","Element",
 
 "ArrayAccess","ArrayDims","Expr","Term",
 
-"Factor","Type"
+"Factor","Type","ExprList"
 
 };
 

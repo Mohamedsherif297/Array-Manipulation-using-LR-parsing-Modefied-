@@ -21,6 +21,10 @@ static void writeNode(shared_ptr<ASTNode> node, int indent, ostream& out) {
         out << ",\n" << sp << "  \"value\": \"" << node->value << "\"";
     }
 
+    if (node->line > 0) {
+        out << ",\n" << sp << "  \"line\": " << node->line;
+    }
+
     if (!node->dataType.empty()) {
         out << ",\n" << sp << "  \"dataType\": \"" << node->dataType << "\"";
     }
@@ -72,6 +76,7 @@ void writeSymbolTable(const SemanticSymbolTable& symTable, const string& filePat
     for (const auto& [name, sym] : entries) {
         file << "  \"" << name << "\": {\n";
         file << "    \"type\": \""    << sym.type    << "\",\n";
+        file << "    \"scope\": \""   << sym.scope   << "\",\n";
         file << "    \"isArray\": "   << (sym.isArray ? "true" : "false");
 
         if (sym.isArray) {

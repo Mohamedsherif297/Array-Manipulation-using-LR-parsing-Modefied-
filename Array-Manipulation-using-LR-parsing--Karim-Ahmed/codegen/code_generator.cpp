@@ -21,6 +21,8 @@
 
 #include "code_generator.h"
 
+#include <algorithm>
+#include <functional>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -67,28 +69,33 @@ bool CodeGenerator::writeIR(const string& filePath) const {
 
 void CodeGenerator::printIR(ostream& out) const {
     for (const Quad& q : ir_) {
+        string line;
         // Format each quad as a readable TAC line.
         if (q.op == "ASSIGN") {
-            // result = arg1
-            out << q.result << " = " << q.arg1 << "\n";
+            line = q.result + " = " + q.arg1;
         } else if (q.op == "LOAD") {
-            // result = arg1[arg2]   (array read)
-            out << q.result << " = " << q.arg1 << "[" << q.arg2 << "]\n";
+            line = q.result + " = " + q.arg1 + "[" + q.arg2 + "]";
         } else if (q.op == "STORE") {
-            // arg1[arg2] = result   (array write)
-            out << q.arg1 << "[" << q.arg2 << "] = " << q.result << "\n";
+            line = q.arg1 + "[" + q.arg2 + "] = " + q.result;
         } else if (q.op == "DECL") {
-            // Declaration annotation (no executable code)
-            out << "// DECL " << q.result;
-            if (!q.arg1.empty()) out << "  type=" << q.arg1;
-            out << "\n";
+            line = "// DECL " + q.result;
+            if (!q.arg1.empty()) line += "  type=" + q.arg1;
+        } else if (q.op == "PRINT") {
+            line = "PRINT " + q.arg1;
+        } else if (q.op == "PRINTLN") {
+            line = "PRINTLN";
+        } else if (q.op == "READ") {
+            line = "READ " + q.result;
         } else if (q.arg2.empty()) {
-            // Unary:  result = op arg1
-            out << q.result << " = " << q.op << " " << q.arg1 << "\n";
+            line = q.result + " = " + q.op + " " + q.arg1;
         } else {
-            // Binary: result = arg1 op arg2
-            out << q.result << " = " << q.arg1
-                << " " << q.op << " " << q.arg2 << "\n";
+            line = q.result + " = " + q.arg1 + " " + q.op + " " + q.arg2;
+        }
+        // Append source line annotation
+        if (q.sourceLine > 0) {
+            out << line << "  ; line:" << q.sourceLine << "\n";
+        } else {
+            out << line << "\n";
         }
     }
 }
@@ -100,8 +107,9 @@ void CodeGenerator::printIR(ostream& out) const {
 void CodeGenerator::emit(const string& op,
                          const string& arg1,
                          const string& arg2,
-                         const string& result) {
-    ir_.emplace_back(op, arg1, arg2, result);
+                         const string& result,
+                         int sourceLine) {
+    ir_.emplace_back(op, arg1, arg2, result, sourceLine > 0 ? sourceLine : currentLine_);
 }
 
 string CodeGenerator::newTemp() {
@@ -122,19 +130,81 @@ void CodeGenerator::genProgram(shared_ptr<ASTNode> node) {
         genStatement(child);
 }
 
+void CodeGenerator::genFunctionDef(shared_ptr<ASTNode> node) {
+    // FunctionDef has: children[0] = return type, children[1] = name, children[2] = body
+    if (node->children.size() < 3) return;
+    
+    // For now, just process the function body (StmtList)
+    auto& body = node->children[2];
+    if (body->type == "StmtList") {
+        for (auto& stmt : body->children) {
+            genStatement(stmt);
+        }
+    }
+}
+
 void CodeGenerator::genStatement(shared_ptr<ASTNode> node) {
     if (!node) return;
 
+    // Track source line for all emitted quads from this statement
+    if (node->line > 0) currentLine_ = node->line;
+
     const string& t = node->type;
 
+    if (t == "FunctionDef")  { genFunctionDef(node); return; }
     if (t == "Declaration")  { genDecl(node);       return; }
     if (t == "DeclAssign")   { genDeclAssign(node);  return; }
     if (t == "Assignment")   { genAssign(node);      return; }
+    if (t == "Output")       { genOutput(node);      return; }
+    if (t == "Input")        { genInput(node);       return; }
     if (t == "Program")      { genProgram(node);     return; }
+    if (t == "StmtList")     {
+        for (auto& child : node->children)
+            genStatement(child);
+        return;
+    }
 
     // Transparent wrapper — recurse into children
     for (auto& child : node->children)
         genStatement(child);
+}
+
+void CodeGenerator::genOutput(shared_ptr<ASTNode> node) {
+    // cout << expr << expr ...
+    for (auto& child : node->children) {
+        if (child->type == "EndLine") {
+            emit("PRINTLN", "", "", "");
+            continue;
+        }
+        const string value = genExpr(child);
+        if (!value.empty()) {
+            emit("PRINT", value, "", "");
+        }
+    }
+}
+
+void CodeGenerator::genInput(shared_ptr<ASTNode> node) {
+    // cin >> target >> target ...
+    for (auto& child : node->children) {
+        if (child->type == "ID") {
+            emit("READ", "", "", child->value);
+        } else if (child->type == "ArrayAccess") {
+            // Reuse assignment path by reading to a temp then storing into target.
+            string tIn = newTemp();
+            emit("READ", "", "", tIn);
+
+            auto fakeAssign = make_shared<ASTNode>();
+            fakeAssign->type = "Assignment";
+            fakeAssign->children.push_back(child);
+
+            auto rhsTemp = make_shared<ASTNode>();
+            rhsTemp->type = "ID";
+            rhsTemp->value = tIn;
+            fakeAssign->children.push_back(rhsTemp);
+
+            genAssign(fakeAssign);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -152,9 +222,27 @@ void CodeGenerator::genDecl(shared_ptr<ASTNode> node) {
                              ? node->children[0]->type
                              : node->children[0]->value;
 
-    // Emit a DECL annotation so the IR is self-documenting.
-    // No executable code is needed for a bare declaration.
-    emit("DECL", typeName, "", varName);
+    // Look up symbol to get array metadata
+    auto it = symTable_.find(varName);
+    if (it != symTable_.end()) {
+        const CGSymbol& sym = it->second;
+        
+        // Emit a DECL annotation with full metadata
+        if (sym.isArray) {
+            string arrayInfo = typeName;
+            if (sym.size2 > 0) {
+                arrayInfo += " array[" + to_string(sym.size1) + "][" + to_string(sym.size2) + "]";
+            } else {
+                arrayInfo += " array[" + to_string(sym.size1) + "]";
+            }
+            emit("DECL", arrayInfo, "", varName);
+        } else {
+            emit("DECL", typeName, "", varName);
+        }
+    } else {
+        // Symbol not found in table, emit basic DECL
+        emit("DECL", typeName, "", varName);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -173,26 +261,56 @@ void CodeGenerator::genDeclAssign(shared_ptr<ASTNode> node) {
                              ? node->children[0]->type
                              : node->children[0]->value;
 
-    emit("DECL", typeName, "", varName);
-
     bool hasArrayDims = (node->children.size() >= 4 &&
-                         node->children[2]->type == "Dimensions");
+                         (node->children[2]->type == "Dimensions" || 
+                          node->children[2]->type == "ArraySize" ||
+                          node->children[2]->type == "InferredSize" ||
+                          node->children[2]->type == "Number"));  // Handle parser issue
 
+    // Look up symbol to get array metadata
+    auto it = symTable_.find(varName);
+    
     if (hasArrayDims) {
         // Array declaration with literal initialiser
-        auto& arrNode = node->children[3]; // "Array" node
+        auto& arrNode = node->children[3]; // "Array" or "ArrayInit" node
 
-        // Look up symbol to get dimension sizes
-        auto it = symTable_.find(varName);
-        if (it == symTable_.end()) {
-            error("Symbol '" + varName + "' not found in symbol table.");
-            return;
+        if (it != symTable_.end()) {
+            const CGSymbol& sym = it->second;
+            
+            // Emit DECL with full array metadata
+            string arrayInfo = typeName;
+            if (sym.size2 > 0) {
+                arrayInfo += " array[" + to_string(sym.size1) + "][" + to_string(sym.size2) + "]";
+            } else {
+                arrayInfo += " array[" + to_string(sym.size1) + "]";
+            }
+            emit("DECL", arrayInfo, "", varName);
+            
+            genArrayInit(node->children[1], arrNode, sym);
+        } else {
+            // Symbol not found - use default
+            emit("DECL", typeName, "", varName);
+            
+            CGSymbol defaultSym;
+            defaultSym.name = varName;
+            defaultSym.type = typeName;
+            defaultSym.isArray = true;
+            defaultSym.size1 = 0;
+            defaultSym.size2 = 0;
+            genArrayInit(node->children[1], arrNode, defaultSym);
         }
-        genArrayInit(node->children[1], arrNode, it->second);
     } else {
         // Scalar declaration with expression initialiser
+        if (it != symTable_.end()) {
+            emit("DECL", typeName, "", varName);
+        } else {
+            emit("DECL", typeName, "", varName);
+        }
+        
         string rhs = genExpr(node->children[2]);
-        emit("ASSIGN", rhs, "", varName);
+        if (!rhs.empty()) {
+            emit("ASSIGN", rhs, "", varName);
+        }
     }
 }
 
@@ -217,17 +335,48 @@ void CodeGenerator::genAssign(shared_ptr<ASTNode> node) {
     } else if (lhsNode->type == "ArrayAccess") {
         // Array element assignment:  x[offset] = rhs
         //
-        // ArrayAccess children:
-        //   children[0] = ID   (array name)
-        //   children[1] = Expr (first index)
-        //   children[2] = Expr (second index, optional)
+        // ArrayAccess can now be recursive (for multi-dimensional arrays)
+        // We need to extract the array name and all indices
 
-        if (lhsNode->children.size() < 2) {
-            error("Malformed ArrayAccess node on LHS of assignment.");
+        // Collect all indices by traversing the recursive ArrayAccess structure
+        vector<string> indices;
+        vector<shared_ptr<ASTNode>> indexNodes;  // Keep nodes for bounds checking
+        shared_ptr<ASTNode> current = lhsNode;
+        string arrName;
+
+        // Traverse down the ArrayAccess chain to collect indices
+        while (current && current->type == "ArrayAccess") {
+            if (current->children.size() < 2) {
+                error("Malformed ArrayAccess node on LHS of assignment.");
+                return;
+            }
+            
+            // The last child is always the index for this level
+            indexNodes.push_back(current->children.back());
+            indices.push_back(genExpr(current->children.back()));
+            
+            // Move to the next level (children[0])
+            if (current->children[0]->type == "ID") {
+                // Base case: we've reached the array name
+                arrName = current->children[0]->value;
+                break;
+            } else if (current->children[0]->type == "ArrayAccess") {
+                // Recursive case: continue traversing
+                current = current->children[0];
+            } else {
+                error("Unexpected node type in ArrayAccess chain: " + current->children[0]->type);
+                return;
+            }
+        }
+
+        if (arrName.empty()) {
+            error("Could not find array name in ArrayAccess chain.");
             return;
         }
 
-        const string& arrName = lhsNode->children[0]->value;
+        // Reverse indices because we collected them from innermost to outermost
+        reverse(indices.begin(), indices.end());
+        reverse(indexNodes.begin(), indexNodes.end());
 
         auto it = symTable_.find(arrName);
         if (it == symTable_.end()) {
@@ -235,30 +384,51 @@ void CodeGenerator::genAssign(shared_ptr<ASTNode> node) {
             return;
         }
         const CGSymbol& sym = it->second;
-        int elemSize = sym.elementSize();
 
-        if (lhsNode->children.size() >= 3) {
-            // 2-D:  offset = (i * size2 + j) * elemSize
-            string i = genExpr(lhsNode->children[1]);
-            string j = genExpr(lhsNode->children[2]);
+        // Bounds checking for constant indices
+        for (size_t i = 0; i < indexNodes.size(); ++i) {
+            auto& idxNode = indexNodes[i];
+            if (idxNode->type == "NUM" || idxNode->type == "Number") {
+                try {
+                    int constIndex = stoi(idxNode->value);
+                    int bound = (i == 0) ? sym.size1 : sym.size2;
+                    
+                    if (constIndex < 0) {
+                        error("Array index cannot be negative: " + arrName + 
+                              "[" + to_string(constIndex) + "]");
+                    } else if (constIndex >= bound) {
+                        error("Array index out of bounds: " + arrName + 
+                              "[" + to_string(constIndex) + "] (size is " + 
+                              to_string(bound) + ")");
+                    }
+                } catch (...) {
+                    // Not a valid integer, skip bounds check
+                }
+            }
+        }
 
+        string tOff;
+
+        if (indices.size() == 1) {
+            // 1-D: Always compute offset explicitly
+            // offset = index
+            tOff = indices[0];
+            emit("STORE", arrName, tOff, rhs);                   // arrName[index] = rhs
+
+        } else if (indices.size() == 2) {
+            // 2-D: Always compute offset explicitly
+            // offset = i * num_cols + j
             string tRow  = newTemp();
-            emit("*", i, to_string(sym.size2), tRow);   // tRow = i * size2
+            emit("*", indices[0], to_string(sym.size2), tRow);   // tRow = i * size2
 
-            string tFlat = newTemp();
-            emit("+", tRow, j, tFlat);                   // tFlat = tRow + j
+            tOff = newTemp();
+            emit("+", tRow, indices[1], tOff);                   // tOff = tRow + j
 
-            string tOff  = newTemp();
-            emit("*", tFlat, to_string(elemSize), tOff); // tOff = tFlat * elemSize
-
-            emit("STORE", arrName, tOff, rhs);           // arrName[tOff] = rhs
+            emit("STORE", arrName, tOff, rhs);                   // arrName[tOff] = rhs
 
         } else {
-            // 1-D:  offset = index * elemSize
-            string idx  = genExpr(lhsNode->children[1]);
-            string tOff = newTemp();
-            emit("*", idx, to_string(elemSize), tOff);   // tOff = idx * elemSize
-            emit("STORE", arrName, tOff, rhs);            // arrName[tOff] = rhs
+            error("Array assignment with " + to_string(indices.size()) + " dimensions not supported.");
+            return;
         }
     } else {
         error("Unsupported LHS node type in assignment: " + lhsNode->type);
@@ -276,8 +446,22 @@ string CodeGenerator::genExpr(shared_ptr<ASTNode> node) {
 
     // ---- Literals ----
     if (t == "NUM")    return node->value;
+    if (t == "Number") return node->value;  // Handle "Number" node type
+    
+    // STANDARDIZED CHAR AND STRING HANDLING:
+    // - CHAR: represented as ASCII integer value (e.g., 'A' → 65)
+    // - STRING: represented as quoted string literal (e.g., "hello")
     if (t == "STRING") return "\"" + node->value + "\"";
-    if (t == "CHAR")   return "'" + node->value + "'";
+    if (t == "CHAR") {
+        // Convert char to ASCII integer for consistent internal representation
+        if (!node->value.empty()) {
+            int asciiValue = static_cast<int>(node->value[0]);
+            return to_string(asciiValue);
+        }
+        return "0";  // Default for empty char
+    }
+
+    if (t == "EndLine") return "\n";
 
     // ---- Variable reference ----
     if (t == "ID") return node->value;
@@ -293,6 +477,16 @@ string CodeGenerator::genExpr(shared_ptr<ASTNode> node) {
     if (t == "Expr" || t == "Term" || t == "Factor") {
         if (!node->children.empty())
             return genExpr(node->children[0]);
+        return "";
+    }
+
+    // ---- ArraySize, ArrayInit, Dimensions, and InferredSize are not expressions, skip them ----
+    if (t == "ArraySize" || t == "ArrayInit" || t == "Dimensions" || t == "InferredSize") {
+        return "";
+    }
+
+    // ---- Array structure nodes are not expressions, skip them ----
+    if (t == "ArrayElements" || t == "ArrayElement" || t == ",") {
         return "";
     }
 
@@ -327,10 +521,15 @@ string CodeGenerator::genBinaryOp(shared_ptr<ASTNode> node) {
 // ---------------------------------------------------------------------------
 // Array access (read):  result = array[offset]
 //
-// ArrayAccess children:
-//   children[0] = ID   (array name)
-//   children[1] = Expr (first index)
-//   children[2] = Expr (second index, optional — 2-D arrays)
+// ArrayAccess can now be recursive:
+//   For x[0]:     children[0] = ID(x), children[1] = Expr(0)
+//   For x[0][0]:  children[0] = ArrayAccess(x[0]), children[1] = Expr(0)
+//
+// UNIFIED APPROACH:
+// - Always compute index explicitly for ALL arrays (1D and 2D)
+// - For 1D: offset = index
+// - For 2D: offset = i * num_cols + j
+// - Add bounds checking for constant indices
 // ---------------------------------------------------------------------------
 
 string CodeGenerator::genArrayAccess(shared_ptr<ASTNode> node) {
@@ -339,41 +538,97 @@ string CodeGenerator::genArrayAccess(shared_ptr<ASTNode> node) {
         return "";
     }
 
-    const string& arrName = node->children[0]->value;
+    // Collect all indices by traversing the recursive ArrayAccess structure
+    vector<string> indices;
+    vector<shared_ptr<ASTNode>> indexNodes;  // Keep nodes for bounds checking
+    shared_ptr<ASTNode> current = node;
+    string arrName;
 
+    // Traverse down the ArrayAccess chain to collect indices
+    while (current && current->type == "ArrayAccess") {
+        if (current->children.size() < 2) {
+            error("Malformed ArrayAccess node in chain.");
+            return "";
+        }
+        
+        // The last child is always the index for this level
+        indexNodes.push_back(current->children.back());
+        indices.push_back(genExpr(current->children.back()));
+        
+        // Move to the next level (children[0])
+        if (current->children[0]->type == "ID") {
+            // Base case: we've reached the array name
+            arrName = current->children[0]->value;
+            break;
+        } else if (current->children[0]->type == "ArrayAccess") {
+            // Recursive case: continue traversing
+            current = current->children[0];
+        } else {
+            error("Unexpected node type in ArrayAccess chain: " + current->children[0]->type);
+            return "";
+        }
+    }
+
+    if (arrName.empty()) {
+        error("Could not find array name in ArrayAccess chain.");
+        return "";
+    }
+
+    // Reverse indices because we collected them from innermost to outermost
+    reverse(indices.begin(), indices.end());
+    reverse(indexNodes.begin(), indexNodes.end());
+
+    // Look up symbol
     auto it = symTable_.find(arrName);
     if (it == symTable_.end()) {
         error("Array '" + arrName + "' not found in symbol table.");
         return "";
     }
     const CGSymbol& sym = it->second;
-    int elemSize = sym.elementSize();
+
+    // Bounds checking for constant indices
+    for (size_t i = 0; i < indexNodes.size(); ++i) {
+        auto& idxNode = indexNodes[i];
+        if (idxNode->type == "NUM" || idxNode->type == "Number") {
+            try {
+                int constIndex = stoi(idxNode->value);
+                int bound = (i == 0) ? sym.size1 : sym.size2;
+                
+                if (constIndex < 0) {
+                    error("Array index cannot be negative: " + arrName + 
+                          "[" + to_string(constIndex) + "]");
+                } else if (constIndex >= bound) {
+                    error("Array index out of bounds: " + arrName + 
+                          "[" + to_string(constIndex) + "] (size is " + 
+                          to_string(bound) + ")");
+                }
+            } catch (...) {
+                // Not a valid integer, skip bounds check
+            }
+        }
+    }
 
     string tOff;
 
-    if (node->children.size() >= 3) {
-        // 2-D access:  offset = (i * size2 + j) * elemSize
-        string i = genExpr(node->children[1]);
-        string j = genExpr(node->children[2]);
-
+    if (indices.size() == 1) {
+        // 1-D access: Always compute offset explicitly
+        // offset = index
+        tOff = indices[0];
+    } else if (indices.size() == 2) {
+        // 2-D access: Always compute offset explicitly
+        // offset = i * num_cols + j
         string tRow  = newTemp();
-        emit("*", i, to_string(sym.size2), tRow);    // tRow = i * size2
-
-        string tFlat = newTemp();
-        emit("+", tRow, j, tFlat);                    // tFlat = tRow + j
+        emit("*", indices[0], to_string(sym.size2), tRow);    // tRow = i * size2
 
         tOff = newTemp();
-        emit("*", tFlat, to_string(elemSize), tOff);  // tOff = tFlat * elemSize
-
+        emit("+", tRow, indices[1], tOff);                    // tOff = tRow + j
     } else {
-        // 1-D access:  offset = index * elemSize
-        string idx = genExpr(node->children[1]);
-        tOff = newTemp();
-        emit("*", idx, to_string(elemSize), tOff);    // tOff = idx * elemSize
+        error("Array access with " + to_string(indices.size()) + " dimensions not supported.");
+        return "";
     }
 
     string tVal = newTemp();
-    emit("LOAD", arrName, tOff, tVal);                // tVal = arrName[tOff]
+    emit("LOAD", arrName, tOff, tVal);                         // tVal = arrName[tOff]
     return tVal;
 }
 
@@ -391,9 +646,12 @@ string CodeGenerator::genArrayAccess(shared_ptr<ASTNode> node) {
 //   x[8]  = 3
 //   x[12] = 4
 //
-// The Array node has ArrayRow children; each ArrayRow has Expr children.
-// For a 1-D array the grammar allows a bare Expr as a Row (rule 17), so
-// we also handle ArrayRow nodes that are actually single expressions.
+// The new grammar uses:
+//   ArrayLiteral → { ArrayElements }
+//   ArrayElements → ArrayElement | ArrayElements , ArrayElement
+//   ArrayElement → Expr | ArrayLiteral
+//
+// This allows recursive nesting for multi-dimensional arrays.
 // ---------------------------------------------------------------------------
 
 void CodeGenerator::genArrayInit(shared_ptr<ASTNode> idNode,
@@ -403,23 +661,111 @@ void CodeGenerator::genArrayInit(shared_ptr<ASTNode> idNode,
     int elemSize = sym.elementSize();
     int flatIndex = 0; // linear element index
 
-    for (auto& rowNode : arrayNode->children) {
-        // Each child of Array is an ArrayRow (or a bare Expr for 1-D)
-        if (rowNode->type == "ArrayRow") {
-            for (auto& elemNode : rowNode->children) {
-                string val = genExpr(elemNode);
-                string tOff = newTemp();
-                emit("*", to_string(flatIndex), to_string(elemSize), tOff);
-                emit("STORE", arrName, tOff, val);
-                ++flatIndex;
+    // Recursive helper to flatten nested array literals
+    function<void(shared_ptr<ASTNode>)> flattenArray = [&](shared_ptr<ASTNode> node) {
+        if (!node) return;
+
+        // Handle ArrayLiteral node
+        if (node->type == "ArrayLiteral") {
+            // ArrayLiteral has one child: ArrayElements
+            if (!node->children.empty()) {
+                flattenArray(node->children[0]);
             }
-        } else {
-            // 1-D array: the row IS the element expression
-            string val = genExpr(rowNode);
-            string tOff = newTemp();
-            emit("*", to_string(flatIndex), to_string(elemSize), tOff);
-            emit("STORE", arrName, tOff, val);
+            return;
+        }
+
+        // Handle ArrayElements node
+        if (node->type == "ArrayElements") {
+            // Process all children (each is an ArrayElement)
+            for (auto& child : node->children) {
+                flattenArray(child);
+            }
+            return;
+        }
+
+        // Handle ArrayElement node
+        if (node->type == "ArrayElement") {
+            // ArrayElement can be either an Expr or a nested ArrayLiteral
+            if (!node->children.empty()) {
+                auto& child = node->children[0];
+                if (child->type == "ArrayLiteral") {
+                    // Nested array literal - recurse
+                    flattenArray(child);
+                } else if (child->type == "ArrayInit") {
+                    // Nested ArrayInit - recurse
+                    flattenArray(child);
+                } else {
+                    // Expression - generate code
+                    string val = genExpr(child);
+                    if (!val.empty()) {
+                        emit("STORE", arrName, to_string(flatIndex), val);  // Direct index, no byte offset
+                        ++flatIndex;
+                    }
+                }
+            }
+            return;
+        }
+
+        // Handle legacy ArrayInit node (flat array)
+        if (node->type == "ArrayInit") {
+            for (auto& elemNode : node->children) {
+                // Skip comma nodes
+                if (elemNode->type == ",") {
+                    continue;
+                }
+                // Handle ArrayElements
+                if (elemNode->type == "ArrayElements") {
+                    flattenArray(elemNode);
+                    continue;
+                }
+                // Handle nested ArrayInit
+                if (elemNode->type == "ArrayInit") {
+                    flattenArray(elemNode);
+                    continue;
+                }
+                // Handle ArrayElement
+                if (elemNode->type == "ArrayElement") {
+                    flattenArray(elemNode);
+                    continue;
+                }
+                // Otherwise treat as expression
+                string val = genExpr(elemNode);
+                if (!val.empty()) {
+                    emit("STORE", arrName, to_string(flatIndex), val);  // Direct index, no byte offset
+                    ++flatIndex;
+                }
+            }
+            return;
+        }
+
+        // Handle legacy ArrayRow node
+        if (node->type == "ArrayRow") {
+            for (auto& elemNode : node->children) {
+                string val = genExpr(elemNode);
+                if (!val.empty()) {
+                    emit("STORE", arrName, to_string(flatIndex), val);  // Direct index, no byte offset
+                    ++flatIndex;
+                }
+            }
+            return;
+        }
+
+        // Handle legacy Array node
+        if (node->type == "Array") {
+            for (auto& rowNode : node->children) {
+                flattenArray(rowNode);
+            }
+            return;
+        }
+
+        // If it's a direct expression, generate code
+        string val = genExpr(node);
+        if (!val.empty()) {
+            emit("STORE", arrName, to_string(flatIndex), val);  // Direct index, no byte offset
             ++flatIndex;
         }
-    }
+    };
+
+    // Start flattening from the root array node
+    flattenArray(arrayNode);
 }

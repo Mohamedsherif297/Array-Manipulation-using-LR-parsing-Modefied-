@@ -13,6 +13,7 @@ struct SemanticSymbol {
     bool   isArray;
     int    size1;       // first dimension  (0 if not array)
     int    size2;       // second dimension (0 if 1-D or not array)
+    string scope;       // "global" or "function(name)"
 };
 
 class SemanticSymbolTable {

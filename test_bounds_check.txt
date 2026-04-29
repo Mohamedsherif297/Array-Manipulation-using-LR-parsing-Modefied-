@@ -1,0 +1,5 @@
+int main() {
+    int x[4] = {1, 2, 3, 4};
+    int a = x[5];
+    return 0;
+}
