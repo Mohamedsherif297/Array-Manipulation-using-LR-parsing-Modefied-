@@ -1,4 +1,14 @@
 {
+  "y": {
+    "type": "int",
+    "scope": "function(main)",
+    "isArray": false
+  },
+  "x": {
+    "type": "int",
+    "scope": "function(main)",
+    "isArray": false
+  },
   "b": {
     "type": "int",
     "scope": "function(main)",
@@ -8,19 +18,5 @@
     "type": "int",
     "scope": "function(main)",
     "isArray": false
-  },
-  "y": {
-    "type": "int",
-    "scope": "function(main)",
-    "isArray": true,
-    "size1": 2,
-    "size2": 3
-  },
-  "x": {
-    "type": "int",
-    "scope": "function(main)",
-    "isArray": true,
-    "size1": 4,
-    "size2": 0
   }
 }
