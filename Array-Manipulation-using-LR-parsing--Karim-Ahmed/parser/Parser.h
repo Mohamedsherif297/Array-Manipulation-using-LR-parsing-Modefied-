@@ -268,14 +268,42 @@ Node* parse(vector<tuple<string,string,int>> input) {
             // ================= DECL =================
             else if (p.lhs == "DeclStmt") {
                 Node* node = new Node();
-                node->type = "Declaration";
+                node->type = "DeclStmt";
                 node->lineNumber = getLineFromChildren(children);
                 node->children.push_back(children[0]); // Type
-                node->children.push_back(children[1]); // ID
+                node->children.push_back(children[1]); // DeclList
                 
-                // Check if there are array dimensions (Type ID ArrayDims ;)
-                if (children.size() == 4) {
-                    node->children.push_back(children[2]); // ArrayDims
+                newNode = node;
+            }
+
+            // ================= DECL LIST =================
+            else if (p.lhs == "DeclList") {
+                Node* node = new Node();
+                node->type = "DeclList";
+                node->lineNumber = getLineFromChildren(children);
+
+                if (children.size() == 3) {
+                    // DeclList , Declarator
+                    node->children = children[0]->children;
+                    node->children.push_back(children[2]);
+                } else {
+                    // Declarator
+                    node->children.push_back(children[0]);
+                }
+
+                newNode = node;
+            }
+
+            // ================= DECLARATOR =================
+            else if (p.lhs == "Declarator") {
+                Node* node = new Node();
+                node->type = "Declarator";
+                node->lineNumber = getLineFromChildren(children);
+                node->children.push_back(children[0]); // ID
+                
+                // Check if there are array dimensions (ID ArrayDims)
+                if (children.size() == 2) {
+                    node->children.push_back(children[1]); // ArrayDims
                 }
                 
                 newNode = node;

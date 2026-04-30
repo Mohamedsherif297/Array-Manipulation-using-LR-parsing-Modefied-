@@ -230,9 +230,71 @@ void SemanticAnalyzer::visitDecl(shared_ptr<ASTNode> node) {
     string typeName = node->children[0]->value.empty()
                       ? node->children[0]->type
                       : node->children[0]->value;
-    string varName  = node->children[1]->value;
-
+    
     node->children[0]->dataType = typeName;
+
+    // Check if this is a multi-declaration (Type DeclList ;)
+    if (node->children.size() >= 2 && node->children[1]->type == "Declarator") {
+        // Multiple declarations: Type a, b, c;
+        // Process each declarator
+        for (size_t i = 1; i < node->children.size(); i++) {
+            auto& declarator = node->children[i];
+            if (declarator->type != "Declarator") continue;
+            
+            if (declarator->children.empty()) continue;
+            
+            string varName = declarator->children[0]->value;
+            declarator->children[0]->dataType = typeName;
+            
+            SemanticSymbol sym;
+            sym.name = varName;
+            sym.type = typeName;
+            sym.isArray = false;
+            sym.size1 = 0;
+            sym.size2 = 0;
+            sym.scope = currentScope_;
+            
+            // Check if declarator has array dimensions
+            if (declarator->children.size() >= 2 &&
+                (declarator->children[1]->type == "Dimensions" ||
+                 declarator->children[1]->type == "ArraySize" ||
+                 declarator->children[1]->type == "InferredSize" ||
+                 declarator->children[1]->type == "Number")) {
+                auto& dims = declarator->children[1];
+                sym.isArray = true;
+                
+                if (dims->type == "InferredSize") {
+                    addError("Array '" + varName + "' declared with empty brackets [] must have an initializer", *dims);
+                    sym.size1 = 0;
+                    sym.size2 = 0;
+                } else if (dims->type == "ArraySize" || dims->type == "Number") {
+                    sym.size1 = stoi(dims->value);
+                    sym.size2 = 0;
+                } else {
+                    sym.size1 = (dims->children.size() >= 1) ? stoi(dims->children[0]->value) : 0;
+                    sym.size2 = (dims->children.size() >= 2) ? stoi(dims->children[1]->value) : 0;
+                }
+                
+                dims->dataType = "int";
+                for (auto& d : dims->children) d->dataType = "int";
+            }
+            
+            if (!symTable_.declare(sym)) {
+                addError("Duplicate declaration of variable '" + varName + "'", *declarator->children[0]);
+                declarator->semanticInfo = "duplicate";
+            } else {
+                declarator->semanticInfo = "declared_here";
+            }
+            
+            declarator->dataType = typeName;
+        }
+        
+        node->dataType = typeName;
+        return;
+    }
+    
+    // Single declaration: Type ID ; or Type ID ArrayDims ;
+    string varName = node->children[1]->value;
     node->children[1]->dataType = typeName;
 
     SemanticSymbol sym;

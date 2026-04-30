@@ -45,9 +45,13 @@ inline vector <Production> grammar = {
 
 {"Stmt", {"IncrStmt"}},
 
-{"DeclStmt", {"Type", "ID", ";"}},
+{"DeclStmt", {"Type", "DeclList", ";"}},
 
-{"DeclStmt", {"Type", "ID", "ArrayDims", ";"}},
+{"DeclList", {"DeclList", ",", "Declarator"}},
+{"DeclList", {"Declarator"}},
+
+{"Declarator", {"ID"}},
+{"Declarator", {"ID", "ArrayDims"}},
 
 {"AssignStmt", {"ID", "=", "Expr", ";"}},
 
@@ -179,7 +183,7 @@ inline set<string> nonTerminals = {
 
 "S'","Program","FunctionDef","GlobalList","GlobalDecl","StmtList","Stmt",
 
-"DeclStmt","AssignStmt","DeclAssignStmt","ReturnStmt",
+"DeclStmt","DeclList","Declarator","AssignStmt","DeclAssignStmt","ReturnStmt",
 
 "ForStmt","ForInit","ForCond","ForUpdate","IncrExpr","IncrStmt","RelOp",
 

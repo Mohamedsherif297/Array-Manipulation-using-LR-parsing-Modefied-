@@ -16,8 +16,15 @@ inline vector <Production> grammar = {
 
 {"S'", {"Program"}},
 
+{"Program", {"IncludeList", "GlobalList", "FunctionDef"}},
+{"Program", {"IncludeList", "FunctionDef"}},
 {"Program", {"GlobalList", "FunctionDef"}},
 {"Program", {"FunctionDef"}},
+
+{"IncludeList", {"IncludeList", "IncludeStmt"}},
+{"IncludeList", {"IncludeStmt"}},
+
+{"IncludeStmt", {"#include", "HEADER"}},
 
 {"GlobalList", {"GlobalList", "GlobalDecl"}},
 {"GlobalList", {"GlobalDecl"}},
@@ -41,9 +48,13 @@ inline vector <Production> grammar = {
 
 {"Stmt", {"IoStmt"}},
 
-{"DeclStmt", {"Type", "ID", ";"}},
+{"DeclStmt", {"Type", "DeclList", ";"}},
 
-{"DeclStmt", {"Type", "ID", "ArrayDims", ";"}},
+{"DeclList", {"DeclList", ",", "Declarator"}},
+{"DeclList", {"Declarator"}},
+
+{"Declarator", {"ID"}},
+{"Declarator", {"ID", "ArrayDims"}},
 
 {"AssignStmt", {"ID", "=", "Expr", ";"}},
 
@@ -110,13 +121,14 @@ inline vector <Production> grammar = {
 {"Type", {"float"}},
 {"Type", {"double"}},
 {"Type", {"char"}},
-{"Type", {"string"}}
+{"Type", {"string"}},
+{"Type", {"bool"}}
 
 };
 
 inline set<string> terminals = {
 
-"int","float","double","char","string",
+"int","float","double","char","string","bool",
 
 "ID","NUM","STRING","CHAR",
 
@@ -126,15 +138,19 @@ inline set<string> terminals = {
 
 "[","]","{","}",",",
 
-"(",")","return","cout","cin","endl","endLine","$"
+"(",")","return","cout","cin","endl","endLine",
+
+"#include","HEADER",
+
+"$"
 
 };
 
 inline set<string> nonTerminals = {
 
-"S'","Program","FunctionDef","GlobalList","GlobalDecl","StmtList","Stmt",
+"S'","Program","FunctionDef","IncludeList","IncludeStmt","GlobalList","GlobalDecl","StmtList","Stmt",
 
-"DeclStmt","AssignStmt","DeclAssignStmt","ReturnStmt",
+"DeclStmt","DeclList","Declarator","AssignStmt","DeclAssignStmt","ReturnStmt",
 
 "IoStmt","CoutList","CinList","InputTarget",
 
