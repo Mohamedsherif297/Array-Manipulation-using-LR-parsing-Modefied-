@@ -176,6 +176,7 @@ void SemanticAnalyzer::visitStatement(shared_ptr<ASTNode> node) {
     if (!node) return;
 
     if (node->type == "Declaration")   { visitDecl(node);       return; }
+    if (node->type == "DeclStmt")      { visitDeclStmt(node);   return; }
     if (node->type == "DeclAssign")    { visitDeclAssign(node);  return; }
     if (node->type == "Assignment")    { visitAssign(node);      return; }
     if (node->type == "Output")        { visitOutput(node);      return; }
@@ -229,7 +230,71 @@ void SemanticAnalyzer::visitInput(shared_ptr<ASTNode> node) {
 }
 
 // ---------------------------------------------------------------------------
-// Declaration:  Type  ID  [ArrayDims]  ;
+// DeclStmt: Type DeclList ;
+//   children[0] = Type
+//   children[1] = DeclList (contains multiple Declarators)
+// ---------------------------------------------------------------------------
+
+void SemanticAnalyzer::visitDeclStmt(shared_ptr<ASTNode> node) {
+    if (node->children.size() < 2) return;
+
+    string typeName = node->children[0]->value.empty()
+                      ? node->children[0]->type
+                      : node->children[0]->value;
+    
+    auto declListNode = node->children[1];
+    
+    // Process each declarator in the list
+    for (auto& declaratorNode : declListNode->children) {
+        if (declaratorNode->type != "Declarator") continue;
+        
+        if (declaratorNode->children.empty()) continue;
+        
+        string varName = declaratorNode->children[0]->value;
+        
+        SemanticSymbol sym;
+        sym.name = varName;
+        sym.type = typeName;
+        sym.scope = currentScope_;
+        sym.isArray = false;
+        sym.size1 = 0;
+        sym.size2 = 0;
+        
+        // Check for array dimensions
+        if (declaratorNode->children.size() > 1) {
+            auto dimsNode = declaratorNode->children[1];
+            sym.isArray = true;
+            
+            if (dimsNode->type == "Number") {
+                // 1D array
+                sym.size1 = stoi(dimsNode->value);
+            } else if (dimsNode->type == "Dimensions") {
+                // 2D array
+                if (dimsNode->children.size() >= 2) {
+                    sym.size1 = stoi(dimsNode->children[0]->value);
+                    sym.size2 = stoi(dimsNode->children[1]->value);
+                }
+            } else if (dimsNode->type == "InferredSize") {
+                addError("Array '" + varName + "' size cannot be inferred without initializer", *declaratorNode);
+            }
+        }
+        
+        // Register in symbol table
+        if (!symTable_.declare(sym)) {
+            addError("Variable '" + varName + "' already declared in " + currentScope_, *declaratorNode);
+        }
+        
+        // Annotate nodes
+        declaratorNode->children[0]->dataType = typeName;
+        declaratorNode->dataType = typeName;
+    }
+    
+    node->children[0]->dataType = typeName;
+    node->dataType = "void";
+}
+
+// ---------------------------------------------------------------------------
+// Declaration:  Type  ID  [ArrayDims]  ;  (OLD FORMAT - for backward compatibility)
 //   children[0] = Type
 //   children[1] = ID
 //   children[2] = Dimensions  (optional, for arrays)

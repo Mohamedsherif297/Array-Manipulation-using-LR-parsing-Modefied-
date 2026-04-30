@@ -270,12 +270,53 @@ Node* parse(vector<tuple<string,string,int>> input) {
                 Node* node = new Node();
                 node->type = "Declaration";
                 node->lineNumber = getLineFromChildren(children);
-                node->children.push_back(children[0]); // Type
-                node->children.push_back(children[1]); // ID
                 
-                // Check if there are array dimensions (Type ID ArrayDims ;)
-                if (children.size() == 4) {
-                    node->children.push_back(children[2]); // ArrayDims
+                // DeclStmt → Type DeclList ;
+                // children[0] = Type, children[1] = DeclList, children[2] = ;
+                node->children.push_back(children[0]); // Type
+                
+                // Flatten DeclList into individual declarations
+                for (auto* decl : children[1]->children) {
+                    node->children.push_back(decl);
+                }
+                
+                newNode = node;
+            }
+            
+            // ================= DECL LIST =================
+            else if (p.lhs == "DeclList") {
+                Node* node = new Node();
+                node->type = "DeclList";
+                node->lineNumber = getLineFromChildren(children);
+                
+                if (children.size() == 1) {
+                    // DeclList → Declarator
+                    node->children.push_back(children[0]);
+                } else if (children.size() == 3) {
+                    // DeclList → DeclList , Declarator
+                    // Flatten the list
+                    for (auto* child : children[0]->children) {
+                        node->children.push_back(child);
+                    }
+                    node->children.push_back(children[2]);
+                }
+                
+                newNode = node;
+            }
+            
+            // ================= DECLARATOR =================
+            else if (p.lhs == "Declarator") {
+                Node* node = new Node();
+                node->type = "Declarator";
+                node->lineNumber = getLineFromChildren(children);
+                
+                if (children.size() == 1) {
+                    // Declarator → ID
+                    node->children.push_back(children[0]);
+                } else if (children.size() == 2) {
+                    // Declarator → ID ArrayDims
+                    node->children.push_back(children[0]); // ID
+                    node->children.push_back(children[1]); // ArrayDims
                 }
                 
                 newNode = node;

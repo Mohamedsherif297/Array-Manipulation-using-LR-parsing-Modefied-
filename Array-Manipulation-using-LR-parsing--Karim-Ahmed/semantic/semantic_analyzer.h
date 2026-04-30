@@ -38,6 +38,7 @@ private:
     void visitFunctionDef(shared_ptr<ASTNode> node);
     void visitProgram(shared_ptr<ASTNode> node);
     void visitStatement(shared_ptr<ASTNode> node);
+    void visitDeclStmt(shared_ptr<ASTNode> node);
     void visitDecl(shared_ptr<ASTNode> node);
     void visitDeclAssign(shared_ptr<ASTNode> node);
     void visitAssign(shared_ptr<ASTNode> node);

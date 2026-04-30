@@ -55,37 +55,45 @@ int main(int argc, char* argv[]) {
     buildStates();
     buildParsingTable();
 
-    vector<pair<string,string>> input;
+    vector<tuple<string,string,int>> input;
 
     for (auto &t : tokens) {
     switch (t.getType()) {
 
         case TokenType::DATATYPE:
-            input.push_back({t.getLexeme(), t.getLexeme()});
+            input.push_back({t.getLexeme(), t.getLexeme(), t.getLineNumber()});
             break;
 
         case TokenType::IDENTIFIER:
-            input.push_back({"ID", t.getLexeme()});
+            input.push_back({"ID", t.getLexeme(), t.getLineNumber()});
             break;
 
         case TokenType::CONSTANT:
-            input.push_back({"NUM", t.getLexeme()});
+            input.push_back({"NUM", t.getLexeme(), t.getLineNumber()});
             break;
 
         case TokenType::STRING:
-            input.push_back({"STRING", t.getLexeme()});
+            input.push_back({"STRING", t.getLexeme(), t.getLineNumber()});
             break;
 
         case TokenType::CHAR:
-            input.push_back({"CHAR", t.getLexeme()});
+            input.push_back({"CHAR", t.getLexeme(), t.getLineNumber()});
+            break;
+
+        case TokenType::INCLUDE:
+            input.push_back({"#include", "#include", t.getLineNumber()});
+            break;
+
+        case TokenType::HEADER:
+            input.push_back({"HEADER", t.getLexeme(), t.getLineNumber()});
             break;
 
         case TokenType::END_OF_FILE:
-            input.push_back({"$", "$"});
+            input.push_back({"$", "$", t.getLineNumber()});
             break;
 
         default:
-            input.push_back({t.getLexeme(), t.getLexeme()});
+            input.push_back({t.getLexeme(), t.getLexeme(), t.getLineNumber()});
             break;
         }
     }
