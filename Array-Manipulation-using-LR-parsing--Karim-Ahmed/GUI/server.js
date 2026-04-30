@@ -14,8 +14,8 @@ const PORT = 3003
 app.use(cors())
 app.use(express.json())
 
-// Path to the compiler project
-const COMPILER_PATH = path.join(__dirname, '..', 'Array-Manipulation-using-LR-parsing--Karim-Ahmed')
+// Path to the compiler project — one level up from GUI/ is the project root
+const COMPILER_PATH = path.join(__dirname, '..')
 
 // Temporary directory for compilation
 const TEMP_DIR = path.join(__dirname, 'temp')

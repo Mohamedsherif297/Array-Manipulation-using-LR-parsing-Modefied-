@@ -41,9 +41,17 @@ inline vector <Production> grammar = {
 
 {"Stmt", {"IoStmt"}},
 
-{"DeclStmt", {"Type", "ID", ";"}},
+{"Stmt", {"ForStmt"}},
 
-{"DeclStmt", {"Type", "ID", "ArrayDims", ";"}},
+{"Stmt", {"IncrStmt"}},
+
+{"DeclStmt", {"Type", "DeclList", ";"}},
+
+{"DeclList", {"DeclList", ",", "Declarator"}},
+{"DeclList", {"Declarator"}},
+
+{"Declarator", {"ID"}},
+{"Declarator", {"ID", "ArrayDims"}},
 
 {"AssignStmt", {"ID", "=", "Expr", ";"}},
 
@@ -56,6 +64,41 @@ inline vector <Production> grammar = {
 {"ReturnStmt", {"return", "Expr", ";"}},
 
 {"ReturnStmt", {"return", ";"}},
+
+// ===== FOR LOOP (CFG only — no semantic/codegen implementation) =====
+// Braced body:   for ( ForInit ; ForCond ; ForUpdate ) { StmtList }
+// Braceless body: for ( ForInit ; ForCond ; ForUpdate ) Stmt
+{"ForStmt", {"for", "(", "ForInit", ";", "ForCond", ";", "ForUpdate", ")", "{", "StmtList", "}"}},
+{"ForStmt", {"for", "(", "ForInit", ";", "ForCond", ";", "ForUpdate", ")", "Stmt"}},
+
+// ForInit: declaration with init, declaration only, or plain assignment
+{"ForInit", {"Type", "ID", "=", "Expr"}},
+{"ForInit", {"Type", "ID"}},
+{"ForInit", {"ID", "=", "Expr"}},
+
+// ForCond: a comparison expression or plain expression
+{"ForCond", {"Expr", "RelOp", "Expr"}},
+{"ForCond", {"Expr"}},
+
+// Relational operators
+{"RelOp", {">"}},
+{"RelOp", {"<"}},
+{"RelOp", {">="}},
+{"RelOp", {"<="}},
+{"RelOp", {"=="}},
+{"RelOp", {"!="}},
+
+// ForUpdate: increment/decrement or assignment
+{"ForUpdate", {"IncrExpr"}},
+{"ForUpdate", {"ID", "=", "Expr"}},
+
+// IncrExpr: used inside for-update (no semicolon)
+{"IncrExpr", {"++", "ID"}},
+{"IncrExpr", {"ID", "++"}},
+
+// ===== INCREMENT STATEMENTS (standalone, with semicolon — fully implemented) =====
+{"IncrStmt", {"++", "ID", ";"}},
+{"IncrStmt", {"ID", "++", ";"}},
 
 {"IoStmt", {"cout", "CoutList", ";"}},
 {"IoStmt", {"cin", "CinList", ";"}},
@@ -86,7 +129,9 @@ inline vector <Production> grammar = {
 {"ExprList", {"Expr"}},
 
 {"ArrayDims", {"ArrayDims", "[", "NUM", "]"}},
+{"ArrayDims", {"ArrayDims", "[", "ID", "]"}},
 {"ArrayDims", {"[", "NUM", "]"}},
+{"ArrayDims", {"[", "ID", "]"}},
 {"ArrayDims", {"[", "]"}},
 
 {"Expr", {"Expr", "+", "Term"}},
@@ -105,6 +150,8 @@ inline vector <Production> grammar = {
 {"Factor", {"CHAR"}},
 {"Factor", {"endl"}},
 {"Factor", {"endLine"}},
+{"Factor", {"++", "ID"}},
+{"Factor", {"ID", "++"}},
 
 {"Type", {"int"}},
 {"Type", {"float"}},
@@ -122,11 +169,13 @@ inline set<string> terminals = {
 
 "+","-","*","/","=",";",
 
-"<<",">>",
+"<<",">>","++",
+
+">","<",">=","<=","==","!=",
 
 "[","]","{","}",",",
 
-"(",")","return","cout","cin","endl","endLine","$"
+"(",")","return","cout","cin","endl","endLine","for","$"
 
 };
 
@@ -134,7 +183,9 @@ inline set<string> nonTerminals = {
 
 "S'","Program","FunctionDef","GlobalList","GlobalDecl","StmtList","Stmt",
 
-"DeclStmt","AssignStmt","DeclAssignStmt","ReturnStmt",
+"DeclStmt","DeclList","Declarator","AssignStmt","DeclAssignStmt","ReturnStmt",
+
+"ForStmt","ForInit","ForCond","ForUpdate","IncrExpr","IncrStmt","RelOp",
 
 "IoStmt","CoutList","CinList","InputTarget",
 

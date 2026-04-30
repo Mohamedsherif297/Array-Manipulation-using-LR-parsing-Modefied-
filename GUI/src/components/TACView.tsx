@@ -149,6 +149,9 @@ function TACView({
               <div key={i} className={`tac-diff-row tac-diff-${d.status}`}>
                 <div className="tac-diff-cell tac-diff-left">
                   {d.original !== null ? (
+<<<<<<< HEAD
+                    <span dangerouslySetInnerHTML={{ __html: highlightTacSyntax(d.original) }} />
+=======
                     <>
                       <span dangerouslySetInnerHTML={{ __html: highlightTacSyntax(d.original) }} />
                       {d.status !== 'same' && d.status !== 'added' && (
@@ -160,6 +163,7 @@ function TACView({
                         </span>
                       )}
                     </>
+>>>>>>> karim-radwan
                   ) : <span className="tac-diff-empty">—</span>}
                 </div>
                 <div className="tac-diff-cell tac-diff-right">
@@ -172,10 +176,16 @@ function TACView({
           </div>
           <div className="tac-diff-legend">
             <span className="diff-badge diff-same">unchanged</span>
+<<<<<<< HEAD
+            <span className="diff-badge diff-folded">folded</span>
+            <span className="diff-badge diff-removed">removed</span>
+            <span className="diff-badge diff-added">added</span>
+=======
             <span className="diff-badge diff-folded">constant folding</span>
             <span className="diff-badge diff-propagated">const propagation</span>
             <span className="diff-badge diff-cse">CSE</span>
             <span className="diff-badge diff-removed">dead code</span>
+>>>>>>> karim-radwan
           </div>
         </div>
       ) : (

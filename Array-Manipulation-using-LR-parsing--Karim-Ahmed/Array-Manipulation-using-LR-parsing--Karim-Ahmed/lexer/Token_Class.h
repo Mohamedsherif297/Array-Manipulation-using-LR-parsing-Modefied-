@@ -24,6 +24,8 @@ enum class TokenType {
     RBRACE,        // }  
     RESERVED,      // Language-specific keywords [cite: 729]
     OPERATOR,      // Symbols like +, *, =, [ , ] [cite: 729]
+    INCLUDE,       // #include directive
+    HEADER,        // Header file name (e.g., <iostream> or "myheader.h")
     END_OF_FILE,   // Special marker for end of input ($) [cite: 2114]
     ILLEGAL        // For reporting lexical errors [cite: 723]
 };
@@ -66,6 +68,8 @@ public:
             case TokenType::RBRACE: return "RBRACE";
             case TokenType::RESERVED: return "RESERVED";
             case TokenType::OPERATOR: return "OPERATOR";
+            case TokenType::INCLUDE: return "INCLUDE";
+            case TokenType::HEADER: return "HEADER";
             case TokenType::END_OF_FILE: return "END_OF_FILE";
             default: return "ILLEGAL";
         }

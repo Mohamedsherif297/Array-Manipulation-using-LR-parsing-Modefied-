@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Header from './components/Header'
 import EditorPanel from './components/EditorPanel'
 import OutputPanel from './components/OutputPanel'
@@ -30,84 +30,91 @@ export interface CompilerOutput {
   }
 }
 
-// One TAC instruction mapped to its source context
 export interface ExecutionStep {
-  tacIndex: number       // index in the TAC lines array
-  sourceLine: number     // source code line (0 = unknown)
-  affectedVars: string[] // variable names written/read in this instruction
+  tacIndex: number
+  sourceLine: number
+  affectedVars: string[]
 }
 
 export type CompilationStatus = 'idle' | 'compiling' | 'success' | 'error'
 export type OutputTab = 'tac' | 'ast' | 'symbols' | 'learn' | 'exprtree' | 'parsetrace'
 
-// Parse TAC text into ExecutionStep timeline
-function buildExecutionSteps(tac: string): ExecutionStep[] {
-  const steps: ExecutionStep[] = []
-  const lines = tac.split('\n').filter(l => l.trim())
-
-  lines.forEach((line, idx) => {
-    // Extract source line from trailing annotation:  ; line:N
-    const lineMatch = line.match(/;\s*line:(\d+)\s*$/)
-    const sourceLine = lineMatch ? parseInt(lineMatch[1]) : 0
-
-    // Extract affected variable names from the instruction
-    const clean = line.replace(/;\s*line:\d+\s*$/, '').trim()
-    const vars = new Set<string>()
-
-    // Skip pure comments
-    if (clean.startsWith('//')) {
-      steps.push({ tacIndex: idx, sourceLine, affectedVars: [] })
-      return
-    }
-
-    // LHS of assignment:  "x = ..." or "x[...] = ..."  or "arr[i] = val"
-    const lhsMatch = clean.match(/^([a-zA-Z_]\w*)(?:\[|[\s=])/)
-    if (lhsMatch) vars.add(lhsMatch[1])
-
-    // RHS identifiers (not temporaries, not numbers)
-    const rhsMatch = clean.match(/=\s*(.+)$/)
-    if (rhsMatch) {
-      const rhs = rhsMatch[1]
-      const ids = rhs.match(/[a-zA-Z_]\w*/g) || []
-      ids.forEach(id => {
-        if (!id.startsWith('t') || isNaN(Number(id.slice(1)))) {
-          vars.add(id)
-        }
-      })
-    }
-
-    // PRINT / READ targets
-    const printMatch = clean.match(/^(?:PRINT|READ)\s+([a-zA-Z_]\w*)/)
-    if (printMatch) vars.add(printMatch[1])
-
-    steps.push({ tacIndex: idx, sourceLine, affectedVars: [...vars] })
-  })
-
-  return steps
+// ── Editor tab (file tab) ────────────────────────────────────────────────────
+export interface EditorTab {
+  id: string
+  label: string
+  code: string
+  output: CompilerOutput | null
+  status: CompilationStatus
+  undoStack: string[]
+  redoStack: string[]
 }
 
-function App() {
-  const [code, setCode] = useState(`int main() {
+let tabCounter = 1
+function makeTab(label?: string, code?: string): EditorTab {
+  return {
+    id: `tab-${Date.now()}-${tabCounter++}`,
+    label: label ?? `main${tabCounter - 1}.c`,
+    code: code ?? `int main() {\n    return 0;\n}`,
+    output: null,
+    status: 'idle',
+    undoStack: [],
+    redoStack: [],
+  }
+}
+
+const DEFAULT_CODE = `int main() {
     int x[4] = {1, 2, 3, 4};
     int y[2][3] = {{1, 2, 3}, {4, 5, 6}};
     int a = x[0];
     int b = y[1][2];
     return 0;
-}`)
-  const [output, setOutput] = useState<CompilerOutput | null>(null)
-  const [status, setStatus] = useState<CompilationStatus>('idle')
+}`
+
+function buildExecutionSteps(tac: string): ExecutionStep[] {
+  const steps: ExecutionStep[] = []
+  const lines = tac.split('\n').filter(l => l.trim())
+  lines.forEach((line, idx) => {
+    const lineMatch = line.match(/;\s*line:(\d+)\s*$/)
+    const sourceLine = lineMatch ? parseInt(lineMatch[1]) : 0
+    const clean = line.replace(/;\s*line:\d+\s*$/, '').trim()
+    const vars = new Set<string>()
+    if (!clean.startsWith('//')) {
+      const lhsMatch = clean.match(/^([a-zA-Z_]\w*)(?:\[|[\s=])/)
+      if (lhsMatch) vars.add(lhsMatch[1])
+      const rhsMatch = clean.match(/=\s*(.+)$/)
+      if (rhsMatch) {
+        const ids = rhsMatch[1].match(/[a-zA-Z_]\w*/g) || []
+        ids.forEach(id => { if (!id.startsWith('t') || isNaN(Number(id.slice(1)))) vars.add(id) })
+      }
+      const printMatch = clean.match(/^(?:PRINT|READ)\s+([a-zA-Z_]\w*)/)
+      if (printMatch) vars.add(printMatch[1])
+    }
+    steps.push({ tacIndex: idx, sourceLine, affectedVars: [...vars] })
+  })
+  return steps
+}
+
+function App() {
+  // ── Tab state ──────────────────────────────────────────────────────────────
+  const [tabs, setTabs] = useState<EditorTab[]>([
+    { ...makeTab('main.c', DEFAULT_CODE), id: 'tab-default' }
+  ])
+  const [activeTabId, setActiveTabId] = useState<string>('tab-default')
+  const [renamingTabId, setRenamingTabId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+
+  const activeTab = tabs.find(t => t.id === activeTabId) ?? tabs[0]
+
+  // ── Shared UI state ────────────────────────────────────────────────────────
   const [currentPhase, setCurrentPhase] = useState<string>('None')
   const [compilationTime, setCompilationTime] = useState<number>(0)
-  const [activeTab, setActiveTab] = useState<OutputTab>('tac')
+  const [activeOutputTab, setActiveOutputTab] = useState<OutputTab>('tac')
   const [highlightedLine, setHighlightedLine] = useState<number | null>(null)
   const [problemsPanelHeight, setProblemsPanelHeight] = useState(200)
   const [isDarkMode, setIsDarkMode] = useState(true)
   const [consoleInput, setConsoleInput] = useState('')
   const [consoleHistory, setConsoleHistory] = useState('')
-  const [undoStack, setUndoStack] = useState<string[]>([])
-  const [redoStack, setRedoStack] = useState<string[]>([])
-
-  // Execution stepper state
   const [executionSteps, setExecutionSteps] = useState<ExecutionStep[]>([])
   const [activeStepIndex, setActiveStepIndex] = useState<number | null>(null)
 
@@ -117,110 +124,137 @@ function App() {
     document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light')
   }, [isDarkMode])
 
+  // ── Tab management ─────────────────────────────────────────────────────────
+  const addTab = () => {
+    const t = makeTab()
+    setTabs(prev => [...prev, t])
+    setActiveTabId(t.id)
+    setHighlightedLine(null)
+    setExecutionSteps([])
+    setActiveStepIndex(null)
+  }
+
+  const closeTab = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setTabs(prev => {
+      if (prev.length === 1) return prev // keep at least one tab
+      const idx = prev.findIndex(t => t.id === id)
+      const next = prev.filter(t => t.id !== id)
+      if (id === activeTabId) {
+        const newActive = next[Math.max(0, idx - 1)]
+        setActiveTabId(newActive.id)
+      }
+      return next
+    })
+  }
+
+  const startRename = (id: string, label: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setRenamingTabId(id)
+    setRenameValue(label)
+  }
+
+  const commitRename = () => {
+    if (!renamingTabId) return
+    const trimmed = renameValue.trim()
+    if (trimmed) {
+      setTabs(prev => prev.map(t => t.id === renamingTabId ? { ...t, label: trimmed } : t))
+    }
+    setRenamingTabId(null)
+  }
+
+  // ── Per-tab code / undo / redo ─────────────────────────────────────────────
+  const updateActiveTab = useCallback((patch: Partial<EditorTab>) => {
+    setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, ...patch } : t))
+  }, [activeTabId])
+
   const handleCodeChange = (nextCode: string) => {
-    if (nextCode === code) return
-    setUndoStack(prev => [...prev, code])
-    setRedoStack([])
-    setCode(nextCode)
+    if (nextCode === activeTab.code) return
+    updateActiveTab({
+      code: nextCode,
+      undoStack: [...activeTab.undoStack, activeTab.code],
+      redoStack: [],
+    })
   }
 
   const handleUndo = () => {
-    if (undoStack.length === 0) return
-    const previous = undoStack[undoStack.length - 1]
-    setUndoStack(prev => prev.slice(0, -1))
-    setRedoStack(prev => [...prev, code])
-    setCode(previous)
+    if (activeTab.undoStack.length === 0) return
+    const previous = activeTab.undoStack[activeTab.undoStack.length - 1]
+    updateActiveTab({
+      code: previous,
+      undoStack: activeTab.undoStack.slice(0, -1),
+      redoStack: [...activeTab.redoStack, activeTab.code],
+    })
   }
 
   const handleRedo = () => {
-    if (redoStack.length === 0) return
-    const next = redoStack[redoStack.length - 1]
-    setRedoStack(prev => prev.slice(0, -1))
-    setUndoStack(prev => [...prev, code])
-    setCode(next)
+    if (activeTab.redoStack.length === 0) return
+    const next = activeTab.redoStack[activeTab.redoStack.length - 1]
+    updateActiveTab({
+      code: next,
+      undoStack: [...activeTab.undoStack, activeTab.code],
+      redoStack: activeTab.redoStack.slice(0, -1),
+    })
   }
 
-  const handleThemeToggle = () => {
-    setIsDarkMode(prev => !prev)
-  }
-
+  // ── Compilation ────────────────────────────────────────────────────────────
   const handleCompile = async () => {
-    setStatus('compiling')
-    setOutput(null)
+    updateActiveTab({ status: 'compiling', output: null })
     setHighlightedLine(null)
-    
     const startTime = Date.now()
 
     try {
       setCurrentPhase('Lexical Analysis')
       await new Promise(resolve => setTimeout(resolve, 200))
-      
       setCurrentPhase('Syntax Analysis')
       await new Promise(resolve => setTimeout(resolve, 200))
 
       const response = await fetch('http://localhost:3003/api/compile', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code, stdin: consoleInput }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: activeTab.code, stdin: consoleInput }),
       })
-
       const result = await response.json()
-      
-      console.log('Received compilation result:', result)
-      console.log('Errors received:', result.errors)
-      
+
       setCurrentPhase('Semantic Analysis')
       await new Promise(resolve => setTimeout(resolve, 200))
-      
       setCurrentPhase('Code Generation')
       await new Promise(resolve => setTimeout(resolve, 200))
 
       const endTime = Date.now()
       setCompilationTime(endTime - startTime)
 
-      const runLog = [
-        '---- Run ----',
-        result.consoleOutput?.trimEnd() || '(no output)',
-      ].join('\n')
+      const runLog = ['---- Run ----', result.consoleOutput?.trimEnd() || '(no output)'].join('\n')
       setConsoleHistory(prev => prev ? `${prev.trimEnd()}\n${runLog}\n` : `${runLog}\n`)
-      
+
       if (result.success) {
-        setStatus('success')
         setCurrentPhase('Complete')
-        setOutput(result)
-        // Build execution step timeline from TAC
+        updateActiveTab({ status: 'success', output: result })
         if (result.tac) {
           setExecutionSteps(buildExecutionSteps(result.tac))
           setActiveStepIndex(null)
         }
-        // Auto-switch to Console tab if cin input is needed
         if (result.warnings?.some((w: string) => w.includes('cin'))) {
           setProblemsPanelHeight(220)
         }
       } else {
-        setStatus('error')
         setCurrentPhase('Failed')
-        setOutput(result)
+        updateActiveTab({ status: 'error', output: result })
         setExecutionSteps([])
         setActiveStepIndex(null)
       }
     } catch (error) {
-      const endTime = Date.now()
-      setCompilationTime(endTime - startTime)
-      setStatus('error')
+      setCompilationTime(Date.now() - startTime)
       setCurrentPhase('Failed')
-      setOutput({ 
-        errors: [{ message: `Network error: ${error}`, phase: 'unknown' }],
-        success: false
+      updateActiveTab({
+        status: 'error',
+        output: { errors: [{ message: `Network error: ${error}`, phase: 'unknown' }], success: false },
       })
     }
   }
 
   const handleReset = () => {
-    setOutput(null)
-    setStatus('idle')
+    updateActiveTab({ output: null, status: 'idle' })
     setCurrentPhase('None')
     setCompilationTime(0)
     setHighlightedLine(null)
@@ -253,43 +287,46 @@ function App() {
     })
   }
 
-  const handleClearConsole = () => {
-    setConsoleHistory('')
-  }
-
-  const handleErrorClick = (line: number) => {
-    setHighlightedLine(line)
-  }
-
   return (
     <div className="app">
-      <Header 
-        status={status}
+      <Header
+        status={activeTab.status}
         currentPhase={currentPhase}
         compilationTime={compilationTime}
         onCompile={handleCompile}
         onReset={handleReset}
-        onThemeToggle={handleThemeToggle}
+        onThemeToggle={() => setIsDarkMode(p => !p)}
         isDarkMode={isDarkMode}
       />
-      
+
       <div className="main-workspace">
-        <EditorPanel 
-          code={code}
+        <EditorPanel
+          code={activeTab.code}
           onChange={handleCodeChange}
           highlightedLine={highlightedLine}
-          errors={output?.errors}
+          errors={activeTab.output?.errors}
           onLineClick={setHighlightedLine}
-          canUndo={undoStack.length > 0}
-          canRedo={redoStack.length > 0}
+          canUndo={activeTab.undoStack.length > 0}
+          canRedo={activeTab.redoStack.length > 0}
           onUndo={handleUndo}
           onRedo={handleRedo}
+          // Tab bar props
+          tabs={tabs}
+          activeTabId={activeTabId}
+          renamingTabId={renamingTabId}
+          renameValue={renameValue}
+          onTabSelect={(id) => { setActiveTabId(id); setHighlightedLine(null); setExecutionSteps([]); setActiveStepIndex(null) }}
+          onTabAdd={addTab}
+          onTabClose={closeTab}
+          onTabRenameStart={startRename}
+          onTabRenameChange={setRenameValue}
+          onTabRenameCommit={commitRename}
         />
-        
-        <OutputPanel 
-          output={output}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
+
+        <OutputPanel
+          output={activeTab.output}
+          activeTab={activeOutputTab}
+          onTabChange={setActiveOutputTab}
           onTacLineClick={handleTacLineClick}
           activeStep={activeStep}
           onStepForward={handleStepForward}
@@ -298,16 +335,16 @@ function App() {
         />
       </div>
 
-      <ProblemsPanel 
-        errors={output?.errors || []}
-        warnings={output?.warnings || []}
+      <ProblemsPanel
+        errors={activeTab.output?.errors || []}
+        warnings={activeTab.output?.warnings || []}
         height={problemsPanelHeight}
         onHeightChange={setProblemsPanelHeight}
-        onErrorClick={handleErrorClick}
-        consoleOutput={consoleHistory || output?.consoleOutput || ''}
+        onErrorClick={setHighlightedLine}
+        consoleOutput={consoleHistory || activeTab.output?.consoleOutput || ''}
         consoleInput={consoleInput}
         onConsoleInputChange={setConsoleInput}
-        onClearConsole={handleClearConsole}
+        onClearConsole={() => setConsoleHistory('')}
       />
     </div>
   )

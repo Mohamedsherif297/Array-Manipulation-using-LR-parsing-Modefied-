@@ -250,6 +250,10 @@ function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick,
 
           {activeTab === 'console' && (
             <div className="console-output" ref={consoleScrollRef}>
+<<<<<<< HEAD
+              <div className="console-line">Provide stdin values for cin (space/newline separated), then Compile.</div>
+              <div className="console-line">Runtime console output:</div>
+=======
               <div className="console-line console-hint">
                 💡 If your program uses <strong>cin</strong>, enter space-separated values below, then click <strong>Compile</strong>.
               </div>
@@ -260,13 +264,25 @@ function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick,
                 placeholder="Enter cin input values here (space or newline separated)&#10;Example: 5 9 Karim"
               />
               <div className="console-line console-output-label">── Runtime Output ──</div>
+>>>>>>> karim-radwan
               {consoleOutput ? (
                 consoleOutput.split('\n').map((line, index) => (
                   <div key={`console-out-${index}`} className="console-line">{line}</div>
                 ))
               ) : (
+<<<<<<< HEAD
+                <div className="console-line">(no output)</div>
+              )}
+              <textarea
+                className="console-input-area"
+                value={consoleInput}
+                onChange={(e) => onConsoleInputChange(e.target.value)}
+                placeholder="Example: 5 9 Karim"
+              />
+=======
                 <div className="console-line console-dim">(no output yet)</div>
               )}
+>>>>>>> karim-radwan
             </div>
           )}
         </div>

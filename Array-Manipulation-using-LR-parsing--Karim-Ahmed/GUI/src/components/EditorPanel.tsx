@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { CompilerError } from '../App'
+import { CompilerError, EditorTab } from '../App'
 import './EditorPanel.css'
 
 interface EditorPanelProps {
@@ -12,9 +12,22 @@ interface EditorPanelProps {
   canRedo: boolean
   onUndo: () => void
   onRedo: () => void
+  // Tab bar
+  tabs: EditorTab[]
+  activeTabId: string
+  renamingTabId: string | null
+  renameValue: string
+  onTabSelect: (id: string) => void
+  onTabAdd: () => void
+  onTabClose: (id: string, e: React.MouseEvent) => void
+  onTabRenameStart: (id: string, label: string, e: React.MouseEvent) => void
+  onTabRenameChange: (v: string) => void
+  onTabRenameCommit: () => void
 }
 
-function EditorPanel({ code, onChange, highlightedLine, errors, onLineClick, canUndo, canRedo, onUndo, onRedo }: EditorPanelProps) {
+function EditorPanel({ code, onChange, highlightedLine, errors, onLineClick, canUndo, canRedo, onUndo, onRedo,
+  tabs, activeTabId, renamingTabId, renameValue, onTabSelect, onTabAdd, onTabClose, onTabRenameStart, onTabRenameChange, onTabRenameCommit
+}: EditorPanelProps) {
   const [cursorPosition, setCursorPosition] = useState({ line: 1, col: 1 })
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const lineNumbersRef = useRef<HTMLDivElement>(null)
@@ -260,28 +273,51 @@ function EditorPanel({ code, onChange, highlightedLine, errors, onLineClick, can
     <div className="editor-panel">
       <div className="editor-header">
         <div className="editor-tabs">
-          <div className="editor-tab active">
-            <span className="tab-icon">📝</span>
-            <span className="tab-label">main.c</span>
-          </div>
+          {tabs.map(tab => {
+            const isActive = tab.id === activeTabId
+            const isRenaming = tab.id === renamingTabId
+            const hasError = tab.output?.errors && tab.output.errors.length > 0
+            return (
+              <div
+                key={tab.id}
+                className={`editor-tab ${isActive ? 'active' : ''} ${hasError ? 'tab-has-error' : ''}`}
+                onClick={() => onTabSelect(tab.id)}
+                title={tab.label}
+              >
+                <span className="tab-icon">📝</span>
+                {isRenaming ? (
+                  <input
+                    className="tab-rename-input"
+                    value={renameValue}
+                    autoFocus
+                    onChange={e => onTabRenameChange(e.target.value)}
+                    onBlur={onTabRenameCommit}
+                    onKeyDown={e => { if (e.key === 'Enter') onTabRenameCommit(); if (e.key === 'Escape') onTabRenameCommit() }}
+                    onClick={e => e.stopPropagation()}
+                  />
+                ) : (
+                  <span
+                    className="tab-label"
+                    onDoubleClick={e => onTabRenameStart(tab.id, tab.label, e)}
+                  >
+                    {tab.label}
+                  </span>
+                )}
+                {tabs.length > 1 && (
+                  <button
+                    className="tab-close-btn"
+                    onClick={e => onTabClose(tab.id, e)}
+                    title="Close tab"
+                  >×</button>
+                )}
+              </div>
+            )
+          })}
+          <button className="tab-add-btn" onClick={onTabAdd} title="New tab">+</button>
         </div>
         <div className="editor-actions">
-          <button
-            className="icon-btn"
-            onClick={onUndo}
-            disabled={!canUndo}
-            title="Undo (Ctrl+Z)"
-          >
-            ↶
-          </button>
-          <button
-            className="icon-btn"
-            onClick={onRedo}
-            disabled={!canRedo}
-            title="Redo (Ctrl+Y)"
-          >
-            ↷
-          </button>
+          <button className="icon-btn" onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)">↶</button>
+          <button className="icon-btn" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Y)">↷</button>
         </div>
       </div>
 

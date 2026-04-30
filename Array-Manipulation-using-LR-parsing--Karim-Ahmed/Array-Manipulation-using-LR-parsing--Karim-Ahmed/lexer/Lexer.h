@@ -34,6 +34,66 @@ public:
                 continue;
             }
 
+            // #include directive - MUST be exactly "#include <header>" or "#include \"header\""
+            if (src[i] == '#') {
+                size_t start = i;
+                i++; // skip '#'
+                
+                // Must be followed by "include" (lowercase only)
+                string directive;
+                while (i < n && isalpha(src[i])) {
+                    directive += src[i++];
+                }
+                
+                if (directive != "include") {
+                    cerr << "Lexical Error: Invalid preprocessor directive '#" << directive 
+                         << "' at line " << currentLine << ". Only '#include' is supported." << endl;
+                    exit(1);
+                }
+                
+                tokens.push_back(Token(TokenType::INCLUDE, "#include", currentLine));
+                
+                // Skip whitespace after #include
+                while (i < n && (src[i] == ' ' || src[i] == '\t')) i++;
+                
+                // Must be followed by < or "
+                if (i >= n) {
+                    cerr << "Lexical Error: Expected '<' or '\"' after '#include' at line " << currentLine << endl;
+                    exit(1);
+                }
+                
+                char openDelim = src[i];
+                char closeDelim;
+                
+                if (openDelim == '<') {
+                    closeDelim = '>';
+                } else if (openDelim == '\"') {
+                    closeDelim = '\"';
+                } else {
+                    cerr << "Lexical Error: Expected '<' or '\"' after '#include' at line " << currentLine 
+                         << ", found '" << openDelim << "'" << endl;
+                    exit(1);
+                }
+                
+                i++; // skip opening delimiter
+                string headerName;
+                headerName += openDelim;
+                
+                // Read header name until closing delimiter
+                while (i < n && src[i] != closeDelim && src[i] != '\n') {
+                    headerName += src[i++];
+                }
+                
+                if (i >= n || src[i] != closeDelim) {
+                    cerr << "Lexical Error: Unterminated header name in '#include' at line " << currentLine << endl;
+                    exit(1);
+                }
+                
+                headerName += src[i++]; // add closing delimiter
+                tokens.push_back(Token(TokenType::HEADER, headerName, currentLine));
+                continue;
+            }
+
             // Comments (Skipping logic remains consistent) [cite: 642]
             if (src[i] == '/' && i + 1 < n) {
                 if (src[i + 1] == '/') {
@@ -54,7 +114,7 @@ public:
                 string word;
                 while (i < n && (isalnum(src[i]) || src[i] == '_')) word += src[i++];
                 
-                if (word == "int" || word == "float" || word == "double" || word == "char" || word == "string") {
+                if (word == "int" || word == "float" || word == "double" || word == "char" || word == "string" || word == "bool") {
                     tokens.push_back(Token(TokenType::DATATYPE, word, currentLine));
                     last_type = word; // Update last declared type
                 } else if (word == "return" || word == "cout" || word == "cin" || word == "endl" || word == "endLine") {

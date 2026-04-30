@@ -25,39 +25,41 @@
             },
             {
               "type": "ID",
-              "value": "x",
+              "value": "i",
               "line": 2
             },
             {
-              "type": "ID",
-              "value": "y",
+              "type": "Number",
+              "value": 0,
               "line": 2
             }
           ]
         },
         {
-          "type": "DeclAssign",
+          "type": "PostIncrement",
           "line": 3,
           "children": [
             {
-              "type": "DATATYPE",
-              "value": "int"
-            },
-            {
               "type": "ID",
-              "value": "z",
-              "line": 3
-            },
-            {
-              "type": "ID",
-              "value": "w",
+              "value": "i",
               "line": 3
             }
           ]
         },
         {
-          "type": "DeclAssign",
+          "type": "PreIncrement",
           "line": 4,
+          "children": [
+            {
+              "type": "ID",
+              "value": "i",
+              "line": 4
+            }
+          ]
+        },
+        {
+          "type": "DeclAssign",
+          "line": 5,
           "children": [
             {
               "type": "DATATYPE",
@@ -65,24 +67,46 @@
             },
             {
               "type": "ID",
-              "value": "a",
-              "line": 4
+              "value": "x",
+              "line": 5
             },
             {
+              "type": "Number",
+              "value": 0,
+              "line": 5
+            }
+          ]
+        },
+        {
+          "type": "Assignment",
+          "line": 6,
+          "children": [
+            {
               "type": "ID",
-              "value": "b",
-              "line": 4
+              "value": "x",
+              "line": 6
+            },
+            {
+              "type": "PreIncrement",
+              "line": 6,
+              "children": [
+                {
+                  "type": "ID",
+                  "value": "i",
+                  "line": 6
+                }
+              ]
             }
           ]
         },
         {
           "type": "Return",
-          "line": 5,
+          "line": 7,
           "children": [
             {
               "type": "Number",
               "value": 0,
-              "line": 5
+              "line": 7
             }
           ]
         }

@@ -295,6 +295,8 @@
   border-color: var(--border-focus);
 }
 
+<<<<<<< HEAD
+=======
 /* Highlight input box when cin values are needed */
 .console-input-area.cin-needed {
   border-color: var(--accent-warning);
@@ -323,6 +325,7 @@
   font-style: italic;
 }
 
+>>>>>>> karim-radwan
 /* ============================================
    RESPONSIVE
    ============================================ */

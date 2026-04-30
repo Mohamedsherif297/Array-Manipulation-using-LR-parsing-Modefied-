@@ -217,6 +217,56 @@ void CodeGenerator::genInput(shared_ptr<ASTNode> node) {
 void CodeGenerator::genDecl(shared_ptr<ASTNode> node) {
     if (node->children.size() < 2) return;
 
+    // Handle multiple declarations (Type DeclList ;)
+    if (node->children.size() >= 2 && node->children[1]->type == "Declarator") {
+        const string& typeName = node->children[0]->value.empty()
+                                 ? node->children[0]->type
+                                 : node->children[0]->value;
+        
+        // Process each declarator
+        for (size_t i = 1; i < node->children.size(); i++) {
+            auto& declarator = node->children[i];
+            if (declarator->type != "Declarator" || declarator->children.empty()) continue;
+            
+            const string& varName = declarator->children[0]->value;
+            auto it = symTable_.find(varName);
+            
+            if (it != symTable_.end()) {
+                const CGSymbol& sym = it->second;
+                
+                if (sym.isArray) {
+                    string arrayInfo = typeName;
+                    if (sym.size2 > 0) {
+                        arrayInfo += " array[" + to_string(sym.size1) + "][" + to_string(sym.size2) + "]";
+                    } else {
+                        arrayInfo += " array[" + to_string(sym.size1) + "]";
+                    }
+                    emit("DECL", arrayInfo, "", varName);
+                    
+                    // Initialize all array elements to 0
+                    int totalSize = (sym.size2 > 0) ? (sym.size1 * sym.size2) : sym.size1;
+                    for (int idx = 0; idx < totalSize; idx++) {
+                        if (sym.size2 > 0) {
+                            // 2D array: calculate row and col
+                            int row = idx / sym.size2;
+                            int col = idx % sym.size2;
+                            emit(varName + "[" + to_string(row) + "][" + to_string(col) + "]", "=", "0");
+                        } else {
+                            // 1D array
+                            emit(varName + "[" + to_string(idx) + "]", "=", "0");
+                        }
+                    }
+                } else {
+                    emit("DECL", typeName, "", varName);
+                }
+            } else {
+                emit("DECL", typeName, "", varName);
+            }
+        }
+        return;
+    }
+
+    // Single declaration: Type ID ; or Type ID ArrayDims ;
     const string& varName = node->children[1]->value;
     const string& typeName = node->children[0]->value.empty()
                              ? node->children[0]->type
@@ -236,6 +286,20 @@ void CodeGenerator::genDecl(shared_ptr<ASTNode> node) {
                 arrayInfo += " array[" + to_string(sym.size1) + "]";
             }
             emit("DECL", arrayInfo, "", varName);
+            
+            // Initialize all array elements to 0
+            int totalSize = (sym.size2 > 0) ? (sym.size1 * sym.size2) : sym.size1;
+            for (int idx = 0; idx < totalSize; idx++) {
+                if (sym.size2 > 0) {
+                    // 2D array: calculate row and col
+                    int row = idx / sym.size2;
+                    int col = idx % sym.size2;
+                    emit(varName + "[" + to_string(row) + "][" + to_string(col) + "]", "=", "0");
+                } else {
+                    // 1D array
+                    emit(varName + "[" + to_string(idx) + "]", "=", "0");
+                }
+            }
         } else {
             emit("DECL", typeName, "", varName);
         }
@@ -768,4 +832,10 @@ void CodeGenerator::genArrayInit(shared_ptr<ASTNode> idNode,
 
     // Start flattening from the root array node
     flattenArray(arrayNode);
+    
+    // Initialize remaining elements to 0
+    int totalSize = (sym.size2 > 0) ? (sym.size1 * sym.size2) : sym.size1;
+    for (int idx = flatIndex; idx < totalSize; idx++) {
+        emit("STORE", arrName, to_string(idx), "0");
+    }
 }
