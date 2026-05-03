@@ -55,6 +55,13 @@ inline vector <Production> grammar = {
 
 {"Stmt", {"IoStmt"}},
 
+{"Stmt", {"IncrDecrStmt"}},
+
+{"IncrDecrStmt", {"++", "ID", ";"}},
+{"IncrDecrStmt", {"--", "ID", ";"}},
+{"IncrDecrStmt", {"ID", "++", ";"}},
+{"IncrDecrStmt", {"ID", "--", ";"}},
+
 {"DeclStmt", {"Type", "DeclList", ";"}},
 
 {"DeclList", {"DeclList", ",", "Declarator"}},
@@ -124,6 +131,10 @@ inline vector <Production> grammar = {
 {"Factor", {"false"}},
 {"Factor", {"endl"}},
 {"Factor", {"endLine"}},
+{"Factor", {"++", "ID"}},
+{"Factor", {"--", "ID"}},
+{"Factor", {"ID", "++"}},
+{"Factor", {"ID", "--"}},
 
 {"Comparison", {"CompTerm", "<", "CompTerm"}},
 {"Comparison", {"CompTerm", ">", "CompTerm"}},
@@ -163,7 +174,7 @@ inline set<string> terminals = {
 
 "ID","NUM","STRING","CHAR",
 
-"+","-","*","/","=",";",
+"+","-","*","/","=",";","++","--",
 
 "<",">","<=",">=","==","!=","<<",">>",
 
@@ -187,7 +198,7 @@ inline set<string> nonTerminals = {
 
 "FunctionDef","GlobalList","GlobalDecl","StmtList","Stmt",
 
-"DeclStmt","DeclList","Declarator","AssignStmt","DeclAssignStmt","ReturnStmt",
+"DeclStmt","DeclList","Declarator","AssignStmt","DeclAssignStmt","ReturnStmt","IncrDecrStmt",
 
 "ForStmt","ForInit","ForCond","ForUpdate",
 

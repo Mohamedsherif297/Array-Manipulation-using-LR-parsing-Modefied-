@@ -2,7 +2,7 @@
 // DECL y  type=int
 // DECL a  type=int
 // DECL b  type=int
-// DECL z  type=bool
+// DECL i  type=int
 x[0] = 1
 x[1] = 2
 x[2] = 3
@@ -17,4 +17,5 @@ t1 = x[0]
 a = t1
 t4 = y[5]
 b = t4
-z = false
+i = 0
+i = 1

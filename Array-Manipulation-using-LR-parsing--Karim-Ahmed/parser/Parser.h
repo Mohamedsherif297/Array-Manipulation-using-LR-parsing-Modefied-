@@ -420,6 +420,16 @@ Node* parse(vector<tuple<string,string,int>> input) {
 
                 newNode = node;
             }
+            
+            // ================= INCREMENT/DECREMENT STATEMENT =================
+            else if (p.lhs == "IncrDecrStmt") {
+                Node* node = new Node();
+                node->type = "IncrDecrStmt";
+                node->lineNumber = getLineFromChildren(children);
+                // Keep all children to preserve structure (++, ID, ; or ID, ++, ;)
+                node->children = children;
+                newNode = node;
+            }
 
             else if (p.lhs == "CoutList") {
                 Node* node = new Node();
@@ -610,7 +620,28 @@ Node* parse(vector<tuple<string,string,int>> input) {
 
             else if (p.lhs == "Factor") {
                 if (children.size() == 3) {
+                    // Could be ( Expr ) or other 3-child patterns
                     newNode = children[1];
+                } else if (children.size() == 2) {
+                    // Could be ++ID, --ID, ID++, or ID--
+                    if (children[0]->value == "++" || children[0]->value == "--") {
+                        // Pre-increment/decrement: ++ID or --ID
+                        Node* node = new Node();
+                        node->type = children[0]->value;  // "++" or "--"
+                        node->lineNumber = getLineFromChildren(children);
+                        node->children.push_back(children[1]); // ID
+                        newNode = node;
+                    } else if (children[1]->value == "++" || children[1]->value == "--") {
+                        // Post-increment/decrement: ID++ or ID--
+                        Node* node = new Node();
+                        node->type = children[1]->value;  // "++" or "--"
+                        node->lineNumber = getLineFromChildren(children);
+                        node->children.push_back(children[0]); // ID
+                        node->value = "post";  // Mark as post-increment/decrement
+                        newNode = node;
+                    } else {
+                        newNode = children[0];
+                    }
                 } else if (children[0]->type == "endl" || children[0]->type == "endLine") {
                     Node* node = new Node();
                     node->type = "EndLine";

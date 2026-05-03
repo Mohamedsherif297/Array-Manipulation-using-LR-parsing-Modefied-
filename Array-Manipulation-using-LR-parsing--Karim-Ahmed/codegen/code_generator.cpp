@@ -169,7 +169,10 @@ void CodeGenerator::genStatement(shared_ptr<ASTNode> node) {
     if (t == "Input")          { genInput(node);       return; }
     if (t == "ForStmt")        { genForStmt(node);     return; }
     if (t == "PreIncrement" ||
-        t == "PostIncrement")  { genIncrement(node);   return; }
+        t == "PostIncrement" ||
+        t == "PreDecrement" ||
+        t == "PostDecrement")  { genIncrDecr(node);    return; }
+    if (t == "IncrDecrStmt")   { genIncrDecrStmt(node); return; }
     if (t == "Program")        { genProgram(node);     return; }
     if (t == "StmtList")       {
         for (auto& child : node->children)
@@ -217,16 +220,40 @@ string CodeGenerator::genCondition(shared_ptr<ASTNode> node) {
 }
 
 // ---------------------------------------------------------------------------
-// Increment:  ++i  (PreIncrement)  or  i++  (PostIncrement)
-//   Both emit:  i = i + 1
-//   The difference (pre vs post) matters only when used as an expression;
-//   as a statement they are identical.
+// Increment/Decrement statement:  ++i;  i++;  --i;  i--;
+//   Emits:  i = i + 1  (for increment)
+//   Emits:  i = i - 1  (for decrement)
 // ---------------------------------------------------------------------------
 
-void CodeGenerator::genIncrement(shared_ptr<ASTNode> node) {
+void CodeGenerator::genIncrDecrStmt(shared_ptr<ASTNode> node) {
+    if (node->children.size() < 2) return;
+    
+    // Find the ID node and determine operation
+    shared_ptr<ASTNode> idNode = nullptr;
+    string op = "+";  // default to increment
+    
+    if (node->children[0]->type == "++" || node->children[0]->type == "--") {
+        // Pre-increment/decrement: ++i or --i
+        op = (node->children[0]->type == "++") ? "+" : "-";
+        idNode = node->children[1];
+    } else {
+        // Post-increment/decrement: i++ or i--
+        op = (node->children[1]->type == "++") ? "+" : "-";
+        idNode = node->children[0];
+    }
+    
+    if (!idNode || idNode->type != "ID") return;
+    
+    string varName = idNode->value;
+    string t = newTemp();
+    emit(op, varName, "1", t);
+    emit("ASSIGN", t, "", varName);
+}
+
+void CodeGenerator::genIncrDecr(shared_ptr<ASTNode> node) {
+    // This handles old-style increment nodes if they exist
     if (node->children.empty()) return;
     string varName = node->children[0]->value;
-    // varName = varName + 1
     string t = newTemp();
     emit("+", varName, "1", t);
     emit("ASSIGN", t, "", varName);
@@ -491,6 +518,55 @@ string CodeGenerator::genExpr(shared_ptr<ASTNode> node) {
     // ---- Variable reference ----
     if (t == "ID") return node->value;
 
+    // ---- Increment/Decrement operators as expressions ----
+    if (t == "++") {
+        if (node->children.size() >= 1 && node->children[0]->type == "ID") {
+            string varName = node->children[0]->value;
+            
+            // Check if it's post-increment (marked with value="post")
+            if (node->value == "post") {
+                // Post-increment: i++
+                string oldVal = newTemp();
+                emit("ASSIGN", varName, "", oldVal);  // save old value
+                string tmp = newTemp();
+                emit("+", varName, "1", tmp);
+                emit("ASSIGN", tmp, "", varName);
+                return oldVal;   // return the old value
+            } else {
+                // Pre-increment: ++i
+                string tmp = newTemp();
+                emit("+", varName, "1", tmp);
+                emit("ASSIGN", tmp, "", varName);
+                return varName;   // return the incremented value
+            }
+        }
+        return "";
+    }
+    
+    if (t == "--") {
+        if (node->children.size() >= 1 && node->children[0]->type == "ID") {
+            string varName = node->children[0]->value;
+            
+            // Check if it's post-decrement (marked with value="post")
+            if (node->value == "post") {
+                // Post-decrement: i--
+                string oldVal = newTemp();
+                emit("ASSIGN", varName, "", oldVal);  // save old value
+                string tmp = newTemp();
+                emit("-", varName, "1", tmp);
+                emit("ASSIGN", tmp, "", varName);
+                return oldVal;   // return the old value
+            } else {
+                // Pre-decrement: --i
+                string tmp = newTemp();
+                emit("-", varName, "1", tmp);
+                emit("ASSIGN", tmp, "", varName);
+                return varName;   // return the decremented value
+            }
+        }
+        return "";
+    }
+
     // ---- Array element read ----
     if (t == "ArrayAccess") return genArrayAccess(node);
 
@@ -514,6 +590,30 @@ string CodeGenerator::genExpr(shared_ptr<ASTNode> node) {
             emit("ASSIGN", varName, "", oldVal);  // save old value
             string tmp = newTemp();
             emit("+", varName, "1", tmp);
+            emit("ASSIGN", tmp, "", varName);
+            return oldVal;   // return the old value
+        }
+        return "";
+    }
+    if (t == "PreDecrement") {
+        // --i: decrement first, return new value
+        if (!node->children.empty()) {
+            string varName = node->children[0]->value;
+            string tmp = newTemp();
+            emit("-", varName, "1", tmp);
+            emit("ASSIGN", tmp, "", varName);
+            return varName;   // return the decremented value
+        }
+        return "";
+    }
+    if (t == "PostDecrement") {
+        // i--: return old value, then decrement
+        if (!node->children.empty()) {
+            string varName = node->children[0]->value;
+            string oldVal = newTemp();
+            emit("ASSIGN", varName, "", oldVal);  // save old value
+            string tmp = newTemp();
+            emit("-", varName, "1", tmp);
             emit("ASSIGN", tmp, "", varName);
             return oldVal;   // return the old value
         }

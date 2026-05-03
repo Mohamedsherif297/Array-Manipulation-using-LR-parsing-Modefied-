@@ -52,6 +52,7 @@ private:
     void visitOutput(shared_ptr<ASTNode> node);
     void visitInput(shared_ptr<ASTNode> node);
     void visitReturn(shared_ptr<ASTNode> node);
+    void visitIncrDecr(shared_ptr<ASTNode> node);
     void visitForStmt(shared_ptr<ASTNode> node);
     string visitExpr(shared_ptr<ASTNode> node);   // returns resolved type
     string visitArrayAccess(shared_ptr<ASTNode> node);

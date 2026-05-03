@@ -215,6 +215,20 @@ public:
                 continue;
             }
             
+            // Check for ++ operator (increment)
+            if (c == '+' && i < n && src[i] == '+') {
+                i++;
+                tokens.push_back(Token(TokenType::OPERATOR, "++", currentLine));
+                continue;
+            }
+            
+            // Check for -- operator (decrement)
+            if (c == '-' && i < n && src[i] == '-') {
+                i++;
+                tokens.push_back(Token(TokenType::OPERATOR, "--", currentLine));
+                continue;
+            }
+            
             // Check for <= and >= operators
             if (c == '<' && i < n && src[i] == '=') {
                 i++;

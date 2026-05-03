@@ -246,6 +246,7 @@ void SemanticAnalyzer::visitStatement(shared_ptr<ASTNode> node) {
     if (node->type == "Output")        { visitOutput(node);      return; }
     if (node->type == "Input")         { visitInput(node);       return; }
     if (node->type == "Return")        { visitReturn(node);      return; }
+    if (node->type == "IncrDecrStmt")  { visitIncrDecr(node);    return; }
     if (node->type == "Program")       { visitProgram(node);     return; }
     if (node->type == "FunctionDef")   { visitFunctionDef(node); return; }
     if (node->type == "ForStmt")       { visitForStmt(node);     return; }
@@ -834,6 +835,72 @@ void SemanticAnalyzer::visitForStmt(shared_ptr<ASTNode> node) {
 }
 
 // ---------------------------------------------------------------------------
+// Increment/Decrement statement:  ++i; or i++; or --i; or i--;
+//   IncrDecrStmt has 3 children:
+//   Pre-increment:  children[0] = "++", children[1] = ID, children[2] = ";"
+//   Post-increment: children[0] = ID, children[1] = "++", children[2] = ";"
+//   Pre-decrement:  children[0] = "--", children[1] = ID, children[2] = ";"
+//   Post-decrement: children[0] = ID, children[1] = "--", children[2] = ";"
+// ---------------------------------------------------------------------------
+
+void SemanticAnalyzer::visitIncrDecr(shared_ptr<ASTNode> node) {
+    if (node->children.size() < 2) return;
+    
+    // Determine if it's pre or post, and find the ID node
+    shared_ptr<ASTNode> idNode = nullptr;
+    bool isPre = false;
+    bool isIncrement = false;
+    
+    if (node->children[0]->type == "++" || node->children[0]->type == "--") {
+        // Pre-increment/decrement: ++i or --i
+        isPre = true;
+        isIncrement = (node->children[0]->type == "++");
+        idNode = node->children[1];
+    } else {
+        // Post-increment/decrement: i++ or i--
+        isPre = false;
+        isIncrement = (node->children[1]->type == "++");
+        idNode = node->children[0];
+    }
+    
+    if (!idNode || idNode->type != "ID") {
+        addError("Invalid increment/decrement statement", *node);
+        return;
+    }
+    
+    string varName = idNode->value;
+    const SemanticSymbol* sym = symTable_.lookup(varName);
+    
+    if (!sym) {
+        addError("Undeclared variable '" + varName + "'", *idNode);
+        node->dataType = "unknown";
+        return;
+    }
+    
+    if (sym->isArray) {
+        addError("Cannot increment/decrement array '" + varName + "'", *idNode);
+        node->dataType = "unknown";
+        return;
+    }
+    
+    if (!isNumericType(sym->type)) {
+        addError("Increment/decrement requires numeric type, got '" + sym->type + "'", *idNode);
+        node->dataType = "unknown";
+        return;
+    }
+    
+    idNode->dataType = sym->type;
+    node->dataType = sym->type;
+    
+    // Mark the node type for code generation
+    if (isPre) {
+        node->semanticInfo = isIncrement ? "PreIncrement" : "PreDecrement";
+    } else {
+        node->semanticInfo = isIncrement ? "PostIncrement" : "PostDecrement";
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Return statement:  return  [Expr]  ;
 //   children[0] = Expr (optional)
 // ---------------------------------------------------------------------------
@@ -923,6 +990,72 @@ string SemanticAnalyzer::visitExpr(shared_ptr<ASTNode> node) {
     if (t == "ArrayAccess") {
         string type = visitArrayAccess(node);
         return type;
+    }
+    
+    // Pre-increment/decrement as expression: ++i or --i
+    // Post-increment/decrement as expression: i++ or i--
+    if (t == "++") {
+        if (node->children.size() >= 1 && node->children[0]->type == "ID") {
+            string varName = node->children[0]->value;
+            const SemanticSymbol* sym = symTable_.lookup(varName);
+            if (!sym) {
+                addError("Undeclared variable '" + varName + "'", *node->children[0]);
+                node->dataType = "unknown";
+                return "unknown";
+            }
+            if (!isNumericType(sym->type)) {
+                addError("Increment requires numeric type", *node);
+                node->dataType = "unknown";
+                return "unknown";
+            }
+            node->children[0]->dataType = sym->type;
+            node->dataType = sym->type;
+            
+            // Mark as pre or post based on node->value
+            if (node->value == "post") {
+                node->semanticInfo = "PostIncrement";
+            } else {
+                node->semanticInfo = "PreIncrement";
+            }
+            return sym->type;
+        } else {
+            // Malformed node
+            addError("Malformed increment expression", *node);
+            node->dataType = "unknown";
+            return "unknown";
+        }
+    }
+    
+    if (t == "--") {
+        if (node->children.size() >= 1 && node->children[0]->type == "ID") {
+            string varName = node->children[0]->value;
+            const SemanticSymbol* sym = symTable_.lookup(varName);
+            if (!sym) {
+                addError("Undeclared variable '" + varName + "'", *node->children[0]);
+                node->dataType = "unknown";
+                return "unknown";
+            }
+            if (!isNumericType(sym->type)) {
+                addError("Decrement requires numeric type", *node);
+                node->dataType = "unknown";
+                return "unknown";
+            }
+            node->children[0]->dataType = sym->type;
+            node->dataType = sym->type;
+            
+            // Mark as pre or post based on node->value
+            if (node->value == "post") {
+                node->semanticInfo = "PostDecrement";
+            } else {
+                node->semanticInfo = "PreDecrement";
+            }
+            return sym->type;
+        } else {
+            // Malformed node
+            addError("Malformed decrement expression", *node);
+            node->dataType = "unknown";
+            return "unknown";
+        }
     }
 
     // BinaryOp node (from parser JSON with operator field)

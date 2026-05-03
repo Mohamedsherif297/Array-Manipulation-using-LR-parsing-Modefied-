@@ -52,6 +52,8 @@ private:
     void genInput      (shared_ptr<ASTNode> node);
     void genForStmt    (shared_ptr<ASTNode> node);
     void genIncrement  (shared_ptr<ASTNode> node);
+    void genIncrDecr   (shared_ptr<ASTNode> node);
+    void genIncrDecrStmt(shared_ptr<ASTNode> node);
 
     // -----------------------------------------------------------------------
     // Expression visitors — return the name of the temporary (or literal /

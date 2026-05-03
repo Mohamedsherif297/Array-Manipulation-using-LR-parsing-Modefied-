@@ -1,6 +1,6 @@
 {
-  "z": {
-    "type": "bool",
+  "i": {
+    "type": "int",
     "scope": "function(main)",
     "isArray": false
   },

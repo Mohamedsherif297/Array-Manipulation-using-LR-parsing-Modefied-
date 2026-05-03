@@ -264,37 +264,61 @@
             {
               "type": "DeclAssign",
               "line": 6,
-              "dataType": "bool",
+              "dataType": "int",
               "semanticInfo": "declared_here",
               "children": [
                 {
                   "type": "DATATYPE",
-                  "value": "bool",
-                  "dataType": "bool"
+                  "value": "int",
+                  "dataType": "int"
                 },
                 {
                   "type": "ID",
-                  "value": "z",
+                  "value": "i",
                   "line": 6,
-                  "dataType": "bool"
+                  "dataType": "int"
                 },
                 {
                   "type": "Number",
-                  "value": "false",
+                  "value": "0",
                   "line": 6,
-                  "dataType": "bool"
+                  "dataType": "int"
+                }
+              ]
+            },
+            {
+              "type": "IncrDecrStmt",
+              "line": 7,
+              "dataType": "int",
+              "semanticInfo": "PostIncrement",
+              "children": [
+                {
+                  "type": "ID",
+                  "value": "i",
+                  "line": 7,
+                  "dataType": "int"
+                },
+                {
+                  "type": "++",
+                  "value": "++",
+                  "line": 7
+                },
+                {
+                  "type": ";",
+                  "value": ";",
+                  "line": 7
                 }
               ]
             },
             {
               "type": "Return",
-              "line": 7,
+              "line": 8,
               "dataType": "int",
               "children": [
                 {
                   "type": "Number",
                   "value": "0",
-                  "line": 7,
+                  "line": 8,
                   "dataType": "int"
                 }
               ]
