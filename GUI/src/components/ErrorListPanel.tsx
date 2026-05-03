@@ -13,7 +13,7 @@ interface ErrorListPanelProps {
 }
 
 function ErrorListPanel({ errors, phases, onErrorClick }: ErrorListPanelProps) {
-  const getPhaseIcon = (passed: boolean) => passed ? '✅' : '❌'
+  const getPhaseIcon = (passed: boolean) => passed ? '✓' : 'X'
   
   const getPhaseLabel = (phase: string) => {
     const labels: Record<string, string> = {
@@ -38,7 +38,7 @@ function ErrorListPanel({ errors, phases, onErrorClick }: ErrorListPanelProps) {
     <div className="error-list-panel">
       <div className="error-header">
         <div className="error-title">
-          <span className="error-icon">❌</span>
+          <span className="error-icon">X</span>
           <h2>Compilation Failed</h2>
         </div>
         <div className="error-count">
@@ -100,7 +100,7 @@ function ErrorListPanel({ errors, phases, onErrorClick }: ErrorListPanelProps) {
       </div>
 
       <div className="error-help">
-        <h3>💡 Quick Tips</h3>
+        <h3>Quick Tips</h3>
         <ul>
           <li><strong>Syntax Errors:</strong> Check for missing semicolons, brackets, or invalid syntax</li>
           <li><strong>Semantic Errors:</strong> Check for type mismatches, undeclared variables, or array bounds</li>

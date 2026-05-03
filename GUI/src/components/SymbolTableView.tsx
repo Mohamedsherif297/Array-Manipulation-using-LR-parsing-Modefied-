@@ -82,7 +82,7 @@ function SymbolTableView({ symbolTable }: SymbolTableViewProps) {
             </button>
           </div>
           <button className="toolbar-btn" title="Export">
-            <span>📋</span>
+            <span>Export</span>
           </button>
         </div>
       </div>

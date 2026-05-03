@@ -102,8 +102,6 @@ function App() {
   const [highlightedLine, setHighlightedLine] = useState<number | null>(null)
   const [problemsPanelHeight, setProblemsPanelHeight] = useState(200)
   const [isDarkMode, setIsDarkMode] = useState(true)
-  const [consoleInput, setConsoleInput] = useState('')
-  const [consoleHistory, setConsoleHistory] = useState('')
   const [undoStack, setUndoStack] = useState<string[]>([])
   const [redoStack, setRedoStack] = useState<string[]>([])
 
@@ -163,7 +161,7 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ code, stdin: consoleInput }),
+        body: JSON.stringify({ code }),
       })
 
       const result = await response.json()
@@ -179,12 +177,6 @@ function App() {
 
       const endTime = Date.now()
       setCompilationTime(endTime - startTime)
-
-      const runLog = [
-        '---- Run ----',
-        result.consoleOutput?.trimEnd() || '(no output)',
-      ].join('\n')
-      setConsoleHistory(prev => prev ? `${prev.trimEnd()}\n${runLog}\n` : `${runLog}\n`)
       
       if (result.success) {
         setStatus('success')
@@ -194,10 +186,6 @@ function App() {
         if (result.tac) {
           setExecutionSteps(buildExecutionSteps(result.tac))
           setActiveStepIndex(null)
-        }
-        // Auto-switch to Console tab if cin input is needed
-        if (result.warnings?.some((w: string) => w.includes('cin'))) {
-          setProblemsPanelHeight(220)
         }
       } else {
         setStatus('error')
@@ -254,7 +242,7 @@ function App() {
   }
 
   const handleClearConsole = () => {
-    setConsoleHistory('')
+    // Console removed - this function is no longer needed but kept for compatibility
   }
 
   const handleErrorClick = (line: number) => {
@@ -304,9 +292,7 @@ function App() {
         height={problemsPanelHeight}
         onHeightChange={setProblemsPanelHeight}
         onErrorClick={handleErrorClick}
-        consoleOutput={consoleHistory || output?.consoleOutput || ''}
-        consoleInput={consoleInput}
-        onConsoleInputChange={setConsoleInput}
+        consoleOutput={output?.consoleOutput || ''}
         onClearConsole={handleClearConsole}
       />
     </div>

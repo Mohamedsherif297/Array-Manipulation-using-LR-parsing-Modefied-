@@ -12,7 +12,7 @@ interface LearnViewProps {
         indices: number[]
       }
 
-      function isNode(value: any): value is { type: string; children?: any[]; value?: any } {
+      function isNode(value: any): value is { type: string; children?: any[]; value?: any; semanticInfo?: string } {
         return value && typeof value === 'object' && typeof value.type === 'string'
       }
 
@@ -25,6 +25,7 @@ interface LearnViewProps {
         }
         if (type === 'string') return ''
         if (type === 'char') return ''
+        if (type === 'bool') return false
         return 0
       }
 
@@ -44,7 +45,12 @@ interface LearnViewProps {
         if (node.type === 'Elements' || node.type === 'Element') {
           return collectArrayInit(node.children?.[0] || node.children?.[node.children.length - 1])
         }
-        if (node.type === 'Number' || node.type === 'NUM') return Number(node.value)
+        if (node.type === 'Number' || node.type === 'NUM') {
+          // Handle boolean literals
+          if (node.value === 'true') return true
+          if (node.value === 'false') return false
+          return Number(node.value)
+        }
         if (node.type === 'STRING') return String(node.value ?? '')
         if (node.type === 'CHAR') return String(node.value ?? '').slice(0, 1)
         if (node.type === 'EndLine') return '\n'
@@ -55,11 +61,64 @@ interface LearnViewProps {
       function evalExpr(node: any, env: Record<string, any>): any {
         if (!isNode(node)) return 0
 
-        if (node.type === 'Number' || node.type === 'NUM') return Number(node.value)
+        if (node.type === 'Number' || node.type === 'NUM') {
+          // Handle boolean literals
+          if (node.value === 'true') return true
+          if (node.value === 'false') return false
+          return Number(node.value)
+        }
         if (node.type === 'STRING') return String(node.value ?? '')
         if (node.type === 'CHAR') return String(node.value ?? '').slice(0, 1)
         if (node.type === 'EndLine') return '\n'
+        if (node.type === 'CONSTANT') {
+          if (node.value === 'true') return true
+          if (node.value === 'false') return false
+          return Number(node.value)
+        }
         if (node.type === 'ID') return env[node.value]
+        
+        // Handle increment/decrement operators
+        if (node.type === '++') {
+          // Could be ++i (pre) or i++ (post)
+          const varName = node.children?.[0]?.value
+          if (varName && varName in env) {
+            const currentValue = env[varName]
+            if (typeof currentValue === 'number') {
+              if (node.value === 'post') {
+                // Post-increment: return old value, then increment
+                const oldValue = currentValue
+                env[varName] = currentValue + 1
+                return oldValue
+              } else {
+                // Pre-increment: increment first, then return new value
+                env[varName] = currentValue + 1
+                return env[varName]
+              }
+            }
+          }
+          return 0
+        }
+        
+        if (node.type === '--') {
+          // Could be --i (pre) or i-- (post)
+          const varName = node.children?.[0]?.value
+          if (varName && varName in env) {
+            const currentValue = env[varName]
+            if (typeof currentValue === 'number') {
+              if (node.value === 'post') {
+                // Post-decrement: return old value, then decrement
+                const oldValue = currentValue
+                env[varName] = currentValue - 1
+                return oldValue
+              } else {
+                // Pre-decrement: decrement first, then return new value
+                env[varName] = currentValue - 1
+                return env[varName]
+              }
+            }
+          }
+          return 0
+        }
 
         if (node.type === 'ArrayAccess') {
           const path: any[] = []
@@ -184,6 +243,42 @@ interface LearnViewProps {
             assignTarget(node.children?.[0], rhs, env)
             return
           }
+          
+          if (node.type === 'IncrDecrStmt') {
+            // Handle increment/decrement statements: ++i, i++, --i, i--
+            if (!node.children || node.children.length < 2) return
+            
+            let varName: string | undefined
+            let isIncrement = false
+            
+            // Check semanticInfo first (most reliable)
+            if (node.semanticInfo) {
+              const info = node.semanticInfo.toLowerCase()
+              isIncrement = info.includes('increment')
+              // Find the ID child
+              const idChild = node.children.find((c: any) => c?.type === 'ID')
+              varName = idChild?.value
+            } else {
+              // Fallback: determine from children structure
+              if (node.children[0]?.type === '++' || node.children[0]?.type === '--') {
+                // Pre-increment/decrement: ++i or --i
+                isIncrement = node.children[0].type === '++'
+                varName = node.children[1]?.value
+              } else if (node.children[1]?.type === '++' || node.children[1]?.type === '--') {
+                // Post-increment/decrement: i++ or i--
+                isIncrement = node.children[1].type === '++'
+                varName = node.children[0]?.value
+              }
+            }
+            
+            if (varName && varName in env) {
+              const currentValue = env[varName]
+              if (typeof currentValue === 'number') {
+                env[varName] = isIncrement ? currentValue + 1 : currentValue - 1
+              }
+            }
+            return
+          }
 
           for (const child of node.children || []) visit(child)
         }
@@ -219,7 +314,10 @@ interface LearnViewProps {
       }
 
       function Cell({ value, highlighted = false }: { value: any; highlighted?: boolean }) {
-        return <div className={`learn-cell ${highlighted ? 'highlighted' : ''}`}>{String(value ?? '')}</div>
+        const displayValue = typeof value === 'boolean' 
+          ? (value ? 'true' : 'false')
+          : String(value ?? '')
+        return <div className={`learn-cell ${highlighted ? 'highlighted' : ''}`}>{displayValue}</div>
       }
 
       function LearnView({ output, activeStep }: LearnViewProps) {
@@ -277,13 +375,19 @@ interface LearnViewProps {
                   </div>
                   {scalarSymbols.length === 0 ? (
                     <div className="empty-learn">No scalar variables</div>
-                  ) : scalarSymbols.map(([name, sym]) => (
-                    <div key={name} className={`scalar-row ${stepVars.has(name) ? 'step-highlight' : ''}`}>
-                      <span className="mono">{name}</span>
-                      <span>{sym.type}</span>
-                      <span className="mono value-box">{String(memory[name] ?? '')}</span>
-                    </div>
-                  ))}
+                  ) : scalarSymbols.map(([name, sym]) => {
+                    const value = memory[name]
+                    const displayValue = sym.type === 'bool' 
+                      ? (value ? 'true' : 'false')
+                      : String(value ?? '')
+                    return (
+                      <div key={name} className={`scalar-row ${stepVars.has(name) ? 'step-highlight' : ''}`}>
+                        <span className="mono">{name}</span>
+                        <span>{sym.type}</span>
+                        <span className="mono value-box">{displayValue}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               </section>
 

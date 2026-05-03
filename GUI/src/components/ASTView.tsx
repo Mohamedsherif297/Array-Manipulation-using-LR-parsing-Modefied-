@@ -20,14 +20,14 @@ function TreeNode({ node, level, expanded, onToggle }: TreeNodeProps) {
   const hasChildren = node.children && Array.isArray(node.children) && node.children.length > 0
 
   const getNodeIcon = (type: string) => {
-    if (type === 'Program' || type === 'FunctionDef') return '📦'
-    if (type === 'DeclAssign' || type === 'Decl') return '📌'
-    if (type === 'Return') return '↩️'
-    if (type === 'ArrayAccess') return '📊'
-    if (type === 'BinaryOp') return '➕'
-    if (type === 'Identifier') return '🔤'
-    if (type === 'Number' || type === 'Literal') return '🔢'
-    return '📄'
+    if (type === 'Program' || type === 'FunctionDef') return 'P'
+    if (type === 'DeclAssign' || type === 'Decl') return 'D'
+    if (type === 'Return') return 'R'
+    if (type === 'ArrayAccess') return 'A'
+    if (type === 'BinaryOp') return 'O'
+    if (type === 'Identifier') return 'I'
+    if (type === 'Number' || type === 'Literal') return 'N'
+    return 'N'
   }
 
   const getNodeClass = (type: string) => {
@@ -174,7 +174,7 @@ function ASTView({ ast }: ASTViewProps) {
               className={`mode-btn ${viewMode === 'graph' ? 'active' : ''}`}
               onClick={() => setViewMode('graph')}
             >
-              <span>🌳</span>
+              <span>Graph</span>
               <span>Graph</span>
             </button>
             <button
@@ -208,7 +208,7 @@ function ASTView({ ast }: ASTViewProps) {
               onClick={handleCopyJson}
               title="Copy JSON to clipboard"
             >
-              <span>{copied ? '✓' : '📋'}</span>
+              <span>{copied ? '✓' : 'Copy'}</span>
               <span>{copied ? 'Copied!' : 'Copy JSON'}</span>
             </button>
           )}

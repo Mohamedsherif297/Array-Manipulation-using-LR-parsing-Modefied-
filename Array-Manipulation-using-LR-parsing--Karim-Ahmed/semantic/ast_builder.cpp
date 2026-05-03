@@ -103,6 +103,8 @@ static shared_ptr<ASTNode> parseObject(const string& s, size_t& pos) {
             node->type = parseString(s, pos);
         } else if (key == "value") {
             node->value = parseValue(s, pos);
+        } else if (key == "op") {
+            node->op = parseString(s, pos);
         } else if (key == "line") {
             // Parse line number
             skipWhitespace(s, pos);

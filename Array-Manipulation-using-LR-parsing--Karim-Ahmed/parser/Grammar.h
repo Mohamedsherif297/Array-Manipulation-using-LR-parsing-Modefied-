@@ -74,6 +74,16 @@ inline vector <Production> grammar = {
 
 {"AssignStmt", {"ArrayAccess", "=", "Expr", ";"}},
 
+{"AssignStmt", {"ID", "+=", "Expr", ";"}},
+{"AssignStmt", {"ID", "-=", "Expr", ";"}},
+{"AssignStmt", {"ID", "*=", "Expr", ";"}},
+{"AssignStmt", {"ID", "/=", "Expr", ";"}},
+
+{"AssignStmt", {"ArrayAccess", "+=", "Expr", ";"}},
+{"AssignStmt", {"ArrayAccess", "-=", "Expr", ";"}},
+{"AssignStmt", {"ArrayAccess", "*=", "Expr", ";"}},
+{"AssignStmt", {"ArrayAccess", "/=", "Expr", ";"}},
+
 {"DeclAssignStmt", {"Type", "ID", "=", "Expr", ";"}},
 
 {"DeclAssignStmt", {"Type", "ID", "ArrayDims", "=", "ArrayLiteral", ";"}},
@@ -86,11 +96,20 @@ inline vector <Production> grammar = {
 {"ForStmt", {"for", "(", "ForInit", ";", "ForCond", ";", "ForUpdate", ")", "{", "}"}},
 
 {"ForInit", {"Type", "ID", "=", "Expr"}},
+{"ForInit", {"Type", "ID"}},
 {"ForInit", {"ID", "=", "Expr"}},
 
 {"ForCond", {"Expr"}},
 
 {"ForUpdate", {"ID", "=", "Expr"}},
+{"ForUpdate", {"ID", "+=", "Expr"}},
+{"ForUpdate", {"ID", "-=", "Expr"}},
+{"ForUpdate", {"ID", "*=", "Expr"}},
+{"ForUpdate", {"ID", "/=", "Expr"}},
+{"ForUpdate", {"++", "ID"}},
+{"ForUpdate", {"--", "ID"}},
+{"ForUpdate", {"ID", "++"}},
+{"ForUpdate", {"ID", "--"}},
 
 // ===== ARRAY LITERAL (UPDATED) =====
 {"ArrayLiteral", {"{", "Elements", "}"}}, 
@@ -174,7 +193,7 @@ inline set<string> terminals = {
 
 "ID","NUM","STRING","CHAR",
 
-"+","-","*","/","=",";","++","--",
+"+","-","*","/","=",";","++","--","+=","-=","*=","/=",
 
 "<",">","<=",">=","==","!=","<<",">>",
 

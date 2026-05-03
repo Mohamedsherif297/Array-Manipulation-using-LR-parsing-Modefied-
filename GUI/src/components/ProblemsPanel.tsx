@@ -9,14 +9,12 @@ interface ProblemsPanelProps {
   onHeightChange: (height: number) => void
   onErrorClick: (line: number) => void
   consoleOutput: string
-  consoleInput: string
-  onConsoleInputChange: (value: string) => void
   onClearConsole: () => void
 }
 
-type ProblemTab = 'problems' | 'warnings' | 'output' | 'console'
+type ProblemTab = 'problems' | 'warnings' | 'output'
 
-function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick, consoleOutput, consoleInput, onConsoleInputChange, onClearConsole }: ProblemsPanelProps) {
+function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick, consoleOutput, onClearConsole }: ProblemsPanelProps) {
   const [activeTab, setActiveTab] = useState<ProblemTab>('problems')
   const [isResizing, setIsResizing] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -92,11 +90,11 @@ function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick,
 
   const getPhaseIcon = (phase: string) => {
     switch (phase) {
-      case 'syntax': return '⚠️'
-      case 'semantic': return '🔍'
-      case 'lexical': return '📝'
-      case 'codegen': return '⚙️'
-      default: return '❌'
+      case 'syntax': return '!'
+      case 'semantic': return 'S'
+      case 'lexical': return 'L'
+      case 'codegen': return 'C'
+      default: return 'X'
     }
   }
 
@@ -115,7 +113,7 @@ function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick,
             onClick={() => !isCollapsed && setActiveTab('problems')}
             disabled={isCollapsed}
           >
-            <span className="tab-icon">❌</span>
+            <span className="tab-icon">X</span>
             <span className="tab-label">Problems</span>
             {errors.length > 0 && (
               <span className="tab-count error">{errors.length}</span>
@@ -127,7 +125,7 @@ function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick,
             onClick={() => !isCollapsed && setActiveTab('warnings')}
             disabled={isCollapsed}
           >
-            <span className="tab-icon">⚠</span>
+            <span className="tab-icon">!</span>
             <span className="tab-label">Warnings</span>
             {warnings.length > 0 && (
               <span className="tab-count warning">{warnings.length}</span>
@@ -139,17 +137,8 @@ function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick,
             onClick={() => !isCollapsed && setActiveTab('output')}
             disabled={isCollapsed}
           >
-            <span className="tab-icon">📋</span>
+            <span className="tab-icon">O</span>
             <span className="tab-label">Output</span>
-          </button>
-
-          <button
-            className={`problems-tab ${activeTab === 'console' ? 'active' : ''}`}
-            onClick={() => !isCollapsed && setActiveTab('console')}
-            disabled={isCollapsed}
-          >
-            <span className="tab-icon">🔍</span>
-            <span className="tab-label">Console</span>
           </button>
         </div>
 
@@ -162,7 +151,7 @@ function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick,
             <span>{isCollapsed ? '▲' : '▼'}</span>
           </button>
           <button className="icon-btn" title="Clear All">
-            <span onClick={onClearConsole}>🗑️</span>
+            <span onClick={onClearConsole}>Clear</span>
           </button>
           <button className="icon-btn" title="Filter">
             <span>🔽</span>
@@ -176,7 +165,7 @@ function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick,
             <div className="problems-list">
               {errors.length === 0 ? (
                 <div className="empty-problems">
-                  <span className="empty-icon">✅</span>
+                  <span className="empty-icon">✓</span>
                   <span className="empty-text">No problems detected</span>
                 </div>
               ) : (
@@ -218,14 +207,14 @@ function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick,
             <div className="problems-list">
               {warnings.length === 0 ? (
                 <div className="empty-problems">
-                  <span className="empty-icon">✅</span>
+                  <span className="empty-icon">✓</span>
                   <span className="empty-text">No warnings</span>
                 </div>
               ) : (
                 warnings.map((warning, index) => (
                   <div key={index} className="problem-item">
                     <div className="problem-icon" style={{ color: 'var(--accent-warning)' }}>
-                      ⚠️
+                      !
                     </div>
                     <div className="problem-details">
                       <div className="problem-message">{warning}</div>
@@ -245,44 +234,6 @@ function ProblemsPanel({ errors, warnings, height, onHeightChange, onErrorClick,
               ) : (
                 <div className="console-line">No runtime output yet.</div>
               )}
-            </div>
-          )}
-
-          {activeTab === 'console' && (
-            <div className="console-output" ref={consoleScrollRef}>
-<<<<<<< HEAD
-              <div className="console-line">Provide stdin values for cin (space/newline separated), then Compile.</div>
-              <div className="console-line">Runtime console output:</div>
-=======
-              <div className="console-line console-hint">
-                💡 If your program uses <strong>cin</strong>, enter space-separated values below, then click <strong>Compile</strong>.
-              </div>
-              <textarea
-                className={`console-input-area ${warnings.some(w => w.includes('cin')) ? 'cin-needed' : ''}`}
-                value={consoleInput}
-                onChange={(e) => onConsoleInputChange(e.target.value)}
-                placeholder="Enter cin input values here (space or newline separated)&#10;Example: 5 9 Karim"
-              />
-              <div className="console-line console-output-label">── Runtime Output ──</div>
->>>>>>> karim-radwan
-              {consoleOutput ? (
-                consoleOutput.split('\n').map((line, index) => (
-                  <div key={`console-out-${index}`} className="console-line">{line}</div>
-                ))
-              ) : (
-<<<<<<< HEAD
-                <div className="console-line">(no output)</div>
-              )}
-              <textarea
-                className="console-input-area"
-                value={consoleInput}
-                onChange={(e) => onConsoleInputChange(e.target.value)}
-                placeholder="Example: 5 9 Karim"
-              />
-=======
-                <div className="console-line console-dim">(no output yet)</div>
-              )}
->>>>>>> karim-radwan
             </div>
           )}
         </div>

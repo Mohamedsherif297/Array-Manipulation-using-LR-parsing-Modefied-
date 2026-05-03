@@ -120,19 +120,19 @@ function TACView({
             className={`toolbar-btn toggle ${showDiff ? 'active' : ''}`}
             onClick={() => { setShowDiff(d => !d); setShowOptimized(false) }}
           >
-            ⚡ Diff
+            Diff
           </button>
           <button
             className={`toolbar-btn toggle ${showOptimized && !showDiff ? 'active' : ''}`}
             onClick={() => { setShowOptimized(o => !o); setShowDiff(false) }}
           >
-            ✨ Optimized
+            Optimized
           </button>
           <button className="toolbar-btn" title="Copy TAC">
-            <span>📋</span>
+            <span>Copy</span>
           </button>
           <button className="toolbar-btn" title="Export">
-            <span>💾</span>
+            <span>Export</span>
           </button>
         </div>
       </div>

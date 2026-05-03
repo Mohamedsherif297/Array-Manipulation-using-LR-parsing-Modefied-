@@ -295,8 +295,6 @@
   border-color: var(--border-focus);
 }
 
-<<<<<<< HEAD
-=======
 /* Highlight input box when cin values are needed */
 .console-input-area.cin-needed {
   border-color: var(--accent-warning);
@@ -309,15 +307,13 @@
   margin-bottom: 4px;
 }
 
-.console-hint strong {
-  color: var(--accent-primary);
-}
-
 .console-output-label {
   color: var(--text-tertiary);
   font-size: 11px;
-  margin-top: 10px;
-  margin-bottom: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 8px 0 4px 0;
 }
 
 .console-dim {
@@ -325,7 +321,10 @@
   font-style: italic;
 }
 
->>>>>>> karim-radwan
+.console-hint strong {
+  color: var(--accent-primary);
+}
+
 /* ============================================
    RESPONSIVE
    ============================================ */

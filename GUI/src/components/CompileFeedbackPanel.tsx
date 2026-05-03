@@ -9,7 +9,7 @@ interface CompileFeedbackPanelProps {
 function CompileFeedbackPanel({ output, onErrorClick }: CompileFeedbackPanelProps) {
   const { errors = [], warnings = [], success, phases } = output
 
-  const getPhaseIcon = (passed: boolean) => passed ? '✅' : '❌'
+  const getPhaseIcon = (passed: boolean) => passed ? '✓' : 'X'
   
   const getPhaseLabel = (phase: string) => {
     const labels: Record<string, string> = {
@@ -25,7 +25,7 @@ function CompileFeedbackPanel({ output, onErrorClick }: CompileFeedbackPanelProp
     <div className="compile-feedback-panel">
       <div className="feedback-header">
         <h3>
-          {success ? '✅ Compilation Successful' : '❌ Compilation Failed'}
+          {success ? 'Compilation Successful' : 'Compilation Failed'}
         </h3>
         <div className="phase-indicators">
           {phases && Object.entries(phases).map(([phase, passed]) => (
@@ -65,7 +65,7 @@ function CompileFeedbackPanel({ output, onErrorClick }: CompileFeedbackPanelProp
 
       {warnings.length > 0 && (
         <div className="feedback-section warnings">
-          <h4>⚠️ Warnings ({warnings.length})</h4>
+          <h4>Warnings ({warnings.length})</h4>
           <div className="feedback-list">
             {warnings.map((warning, index) => (
               <div key={index} className="feedback-item warning-item">

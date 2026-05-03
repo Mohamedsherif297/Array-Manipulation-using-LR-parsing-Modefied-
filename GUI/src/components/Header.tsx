@@ -44,16 +44,11 @@ function Header({
     <header className="header">
       <div className="header-left">
         <div className="logo">
-<<<<<<< HEAD
-          <span className="logo-icon">🔧</span>
-          <span className="logo-text">Array Compiler Studio</span>
-=======
           <span className="logo-icon">🧠</span>
           <div className="logo-text-group">
             <span className="logo-text">Dr. Emad Compiler</span>
             <span className="logo-tagline">From Code to Execution — Step by Step</span>
           </div>
->>>>>>> karim-radwan
         </div>
         
         <div className="status-bar">
@@ -105,7 +100,7 @@ function Header({
           onClick={onThemeToggle}
           title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
-          <span>{isDarkMode ? '☀️' : '🌙'}</span>
+          <span>{isDarkMode ? 'Light' : 'Dark'}</span>
         </button>
       </div>
     </header>

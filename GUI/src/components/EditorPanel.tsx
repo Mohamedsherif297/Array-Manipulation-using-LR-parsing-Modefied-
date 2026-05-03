@@ -207,6 +207,30 @@ function EditorPanel({ code, onChange, highlightedLine, errors, onLineClick, can
     textarea.style.width = Math.max(textarea.scrollWidth, textarea.clientWidth) + 'px'
   }, [code])
 
+  // Scroll to highlighted line when it changes
+  useEffect(() => {
+    if (highlightedLine !== null && codeAreaRef.current) {
+      const lineHeight = 22.4 // Must match the line height in CSS
+      const targetScrollTop = (highlightedLine - 1) * lineHeight
+      const containerHeight = codeAreaRef.current.clientHeight
+      const currentScrollTop = codeAreaRef.current.scrollTop
+      
+      // Only scroll if the line is not visible in the current viewport
+      const lineTop = targetScrollTop
+      const lineBottom = targetScrollTop + lineHeight
+      const viewportTop = currentScrollTop
+      const viewportBottom = currentScrollTop + containerHeight
+      
+      if (lineTop < viewportTop || lineBottom > viewportBottom) {
+        // Center the line in the viewport
+        codeAreaRef.current.scrollTo({
+          top: targetScrollTop - containerHeight / 2 + lineHeight / 2,
+          behavior: 'smooth'
+        })
+      }
+    }
+  }, [highlightedLine])
+
   // Syntax highlighting - process in correct order to avoid conflicts
   const highlightSyntax = (line: string) => {
     if (!line) return '&nbsp;'
@@ -261,7 +285,7 @@ function EditorPanel({ code, onChange, highlightedLine, errors, onLineClick, can
       <div className="editor-header">
         <div className="editor-tabs">
           <div className="editor-tab active">
-            <span className="tab-icon">📝</span>
+            <span className="tab-icon">C</span>
             <span className="tab-label">main.c</span>
           </div>
         </div>

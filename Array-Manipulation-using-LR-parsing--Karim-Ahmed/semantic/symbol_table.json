@@ -1,31 +1,9 @@
 {
-  "i": {
-    "type": "int",
-    "scope": "function(main)",
-    "isArray": false
-  },
-  "b": {
-    "type": "int",
-    "scope": "function(main)",
-    "isArray": false
-  },
-  "a": {
-    "type": "int",
-    "scope": "function(main)",
-    "isArray": false
-  },
-  "y": {
-    "type": "int",
-    "scope": "function(main)",
-    "isArray": true,
-    "size1": 2,
-    "size2": 3
-  },
   "x": {
     "type": "int",
     "scope": "function(main)",
     "isArray": true,
-    "size1": 4,
+    "size1": 5,
     "size2": 0
   }
 }

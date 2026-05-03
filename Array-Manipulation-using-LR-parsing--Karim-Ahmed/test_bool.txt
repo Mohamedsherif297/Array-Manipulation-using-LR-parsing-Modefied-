@@ -1,5 +1,0 @@
-int main() {
-    bool flag = true;
-    bool check = false;
-    return 0;
-}

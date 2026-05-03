@@ -268,10 +268,30 @@ void SemanticAnalyzer::visitOutput(shared_ptr<ASTNode> node) {
     for (auto& child : node->children) {
         if (child->type == "CoutList") {
             for (auto& expr : child->children) {
-                visitExpr(expr);
+                string exprType = visitExpr(expr);
+                
+                // Check if trying to output an array directly
+                if (expr->type == "ID") {
+                    const SemanticSymbol* sym = symTable_.lookup(expr->value);
+                    if (sym && sym->isArray) {
+                        addError("Cannot output array '" + expr->value + 
+                                 "' directly. Use array element access (e.g., " + 
+                                 expr->value + "[i]) instead", *expr);
+                    }
+                }
             }
         } else {
-            visitExpr(child);
+            string exprType = visitExpr(child);
+            
+            // Check if trying to output an array directly
+            if (child->type == "ID") {
+                const SemanticSymbol* sym = symTable_.lookup(child->value);
+                if (sym && sym->isArray) {
+                    addError("Cannot output array '" + child->value + 
+                             "' directly. Use array element access (e.g., " + 
+                             child->value + "[i]) instead", *child);
+                }
+            }
         }
     }
     
@@ -290,6 +310,12 @@ void SemanticAnalyzer::visitInput(shared_ptr<ASTNode> node) {
                     if (!sym) {
                         addError("Undeclared variable '" + target->value + "'", *target);
                     } else {
+                        // Check if trying to input into an array directly
+                        if (sym->isArray) {
+                            addError("Cannot input into array '" + target->value + 
+                                     "' directly. Use array element access (e.g., " + 
+                                     target->value + "[i]) instead", *target);
+                        }
                         target->dataType = sym->type;
                     }
                 } else if (target->type == "ArrayAccess") {
@@ -303,6 +329,12 @@ void SemanticAnalyzer::visitInput(shared_ptr<ASTNode> node) {
                             if (!sym) {
                                 addError("Undeclared variable '" + actualTarget->value + "'", *actualTarget);
                             } else {
+                                // Check if trying to input into an array directly
+                                if (sym->isArray) {
+                                    addError("Cannot input into array '" + actualTarget->value + 
+                                             "' directly. Use array element access (e.g., " + 
+                                             actualTarget->value + "[i]) instead", *actualTarget);
+                                }
                                 actualTarget->dataType = sym->type;
                             }
                         } else if (actualTarget->type == "ArrayAccess") {
@@ -630,6 +662,37 @@ void SemanticAnalyzer::visitAssign(shared_ptr<ASTNode> node) {
 
     string rhsType = visitExpr(rhsNode);
 
+    // Check if this is a compound assignment (+=, -=, *=, /=)
+    if (!node->op.empty() && 
+        (node->op == "+=" || node->op == "-=" || node->op == "*=" || node->op == "/=")) {
+        // For compound assignments, both sides must be numeric
+        // Exception: += can work with strings for concatenation
+        if (node->op == "+=" && (lhsType == "string" || rhsType == "string")) {
+            // String concatenation with +=
+            if ((lhsType == "string" || lhsType == "char") && 
+                (rhsType == "string" || rhsType == "char")) {
+                node->dataType = "string";
+                node->semanticInfo = "compound_assignment";
+                return;
+            } else {
+                addError("Cannot use += with string and non-string type", *rhsNode);
+                node->dataType = lhsType;
+                return;
+            }
+        }
+        
+        // For arithmetic compound assignments, both sides must be numeric
+        if (!isNumericType(lhsType) || !isNumericType(rhsType)) {
+            addError("Compound assignment operator '" + node->op + 
+                     "' requires numeric types, got '" + lhsType + "' and '" + rhsType + "'", *node);
+        }
+        
+        node->dataType = lhsType;
+        node->semanticInfo = "compound_assignment";
+        return;
+    }
+
+    // Regular assignment (=)
     // Special case: allow editing string via indexing.
     // Examples:
     //   string name = "karim";
@@ -694,10 +757,6 @@ void SemanticAnalyzer::visitForStmt(shared_ptr<ASTNode> node) {
     node->dataType = "void";
     node->semanticInfo = "for_loop_no_codegen";  // Mark for code generator to skip
     
-    // Enter a new scope for the for loop
-    string previousScope = currentScope_;
-    currentScope_ = "for_loop";
-    
     // Set flag to indicate we're inside a for loop
     bool wasInsideForLoop = insideForLoop_;
     insideForLoop_ = true;
@@ -707,15 +766,16 @@ void SemanticAnalyzer::visitForStmt(shared_ptr<ASTNode> node) {
         auto& initNode = node->children[2];
         
         if (!initNode->children.empty()) {
-            // Check if it's a declaration (Type ID = Expr) or assignment (ID = Expr)
-            if (initNode->children.size() >= 4 && 
-                (initNode->children[0]->type == "int" || 
+            // Check if it's a declaration with or without initialization, or just assignment
+            if (initNode->children.size() >= 2 && 
+                (initNode->children[0]->type == "DATATYPE" ||
+                 initNode->children[0]->type == "int" || 
                  initNode->children[0]->type == "float" ||
                  initNode->children[0]->type == "double" ||
                  initNode->children[0]->type == "char" ||
                  initNode->children[0]->type == "string" ||
                  initNode->children[0]->type == "bool")) {
-                // Declaration: Type ID = Expr
+                // Declaration: Type ID or Type ID = Expr
                 string typeName = initNode->children[0]->value.empty() 
                                   ? initNode->children[0]->type 
                                   : initNode->children[0]->value;
@@ -724,14 +784,15 @@ void SemanticAnalyzer::visitForStmt(shared_ptr<ASTNode> node) {
                 initNode->children[0]->dataType = typeName;
                 initNode->children[1]->dataType = typeName;
                 
-                // Declare the loop variable
+                // Declare the loop variable in the CURRENT scope (not a new scope)
+                // This allows the variable to be visible in condition and update
                 SemanticSymbol sym;
                 sym.name = varName;
                 sym.type = typeName;
                 sym.isArray = false;
                 sym.size1 = 0;
                 sym.size2 = 0;
-                sym.scope = currentScope_;
+                sym.scope = currentScope_;  // Use current scope, not a new one
                 
                 if (!symTable_.declare(sym)) {
                     addError("Duplicate declaration of loop variable '" + varName + "'", *initNode->children[1]);
@@ -739,13 +800,19 @@ void SemanticAnalyzer::visitForStmt(shared_ptr<ASTNode> node) {
                     initNode->semanticInfo = "loop_var_declared";
                 }
                 
-                // Validate the initialization expression
+                // Validate the initialization expression if present
                 if (initNode->children.size() >= 4) {
+                    // Type ID = Expr (has initialization)
                     string exprType = visitExpr(initNode->children[3]);
                     if (!isAssignmentCompatible(typeName, exprType)) {
                         addError("Type mismatch in loop initialization: cannot assign '" + exprType +
                                  "' to '" + typeName + "'", *initNode->children[3]);
                     }
+                } else {
+                    // Type ID (no initialization - variable is uninitialized)
+                    // This is an error - loop variable must be initialized
+                    addError("Loop variable '" + varName + "' declared without initialization", *initNode->children[1]);
+                    initNode->semanticInfo = "loop_var_declared_uninitialized_error";
                 }
                 
                 initNode->dataType = typeName;
@@ -795,22 +862,73 @@ void SemanticAnalyzer::visitForStmt(shared_ptr<ASTNode> node) {
     if (node->children.size() > 6 && node->children[6]->type == "ForUpdate") {
         auto& updateNode = node->children[6];
         
-        if (!updateNode->children.empty() && updateNode->children.size() >= 3) {
-            // ID = Expr
-            string varName = updateNode->children[0]->value;
-            const SemanticSymbol* sym = symTable_.lookup(varName);
-            
-            if (!sym) {
-                addError("Undeclared variable '" + varName + "' in loop update", *updateNode->children[0]);
-                updateNode->children[0]->dataType = "unknown";
-            } else {
-                updateNode->children[0]->dataType = sym->type;
+        if (!updateNode->children.empty()) {
+            // Check if it's increment/decrement (++i, i++, --i, i--)
+            if (updateNode->children.size() == 2) {
+                // Either ++ID, --ID, ID++, or ID--
+                string varName;
+                bool isIncrement = false;
                 
-                // Validate the update expression
-                string exprType = visitExpr(updateNode->children[2]);
-                if (!isAssignmentCompatible(sym->type, exprType)) {
-                    addError("Type mismatch in loop update: cannot assign '" + exprType +
-                             "' to '" + sym->type + "'", *updateNode->children[2]);
+                if (updateNode->children[0]->type == "++" || updateNode->children[0]->type == "--") {
+                    // Pre-increment/decrement: ++i or --i
+                    isIncrement = (updateNode->children[0]->type == "++");
+                    varName = updateNode->children[1]->value;
+                } else {
+                    // Post-increment/decrement: i++ or i--
+                    isIncrement = (updateNode->children[1]->type == "++");
+                    varName = updateNode->children[0]->value;
+                }
+                
+                const SemanticSymbol* sym = symTable_.lookup(varName);
+                if (!sym) {
+                    addError("Undeclared variable '" + varName + "' in loop update", 
+                             *updateNode->children[0]);
+                    updateNode->dataType = "unknown";
+                } else {
+                    if (!isNumericType(sym->type)) {
+                        addError("Increment/decrement requires numeric type in loop update, got '" + 
+                                 sym->type + "'", *updateNode->children[0]);
+                    }
+                    updateNode->dataType = sym->type;
+                }
+            } else if (updateNode->children.size() >= 3) {
+                // ID = Expr or ID += Expr or ID -= Expr, etc.
+                string varName = updateNode->children[0]->value;
+                const SemanticSymbol* sym = symTable_.lookup(varName);
+                
+                if (!sym) {
+                    addError("Undeclared variable '" + varName + "' in loop update", *updateNode->children[0]);
+                    updateNode->children[0]->dataType = "unknown";
+                } else {
+                    updateNode->children[0]->dataType = sym->type;
+                    
+                    // Check if it's a compound assignment
+                    string op = updateNode->children[1]->value;
+                    if (op == "+=" || op == "-=" || op == "*=" || op == "/=") {
+                        // Compound assignment - validate numeric types
+                        string exprType = visitExpr(updateNode->children[2]);
+                        
+                        if (op == "+=" && sym->type == "string") {
+                            // String concatenation is allowed
+                            if (exprType != "string" && exprType != "char") {
+                                addError("Cannot use += with string and non-string type in loop update", 
+                                         *updateNode->children[2]);
+                            }
+                        } else {
+                            // Arithmetic compound assignment - both must be numeric
+                            if (!isNumericType(sym->type) || !isNumericType(exprType)) {
+                                addError("Compound assignment operator '" + op + 
+                                         "' requires numeric types in loop update", *updateNode->children[2]);
+                            }
+                        }
+                    } else {
+                        // Regular assignment - validate type compatibility
+                        string exprType = visitExpr(updateNode->children[2]);
+                        if (!isAssignmentCompatible(sym->type, exprType)) {
+                            addError("Type mismatch in loop update: cannot assign '" + exprType +
+                                     "' to '" + sym->type + "'", *updateNode->children[2]);
+                        }
+                    }
                 }
             }
             
@@ -829,8 +947,7 @@ void SemanticAnalyzer::visitForStmt(shared_ptr<ASTNode> node) {
         }
     }
     
-    // Restore previous scope and flag
-    currentScope_ = previousScope;
+    // Restore previous flag
     insideForLoop_ = wasInsideForLoop;
 }
 

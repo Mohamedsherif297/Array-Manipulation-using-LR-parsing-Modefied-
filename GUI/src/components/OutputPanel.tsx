@@ -4,10 +4,7 @@ import ASTView from './ASTView'
 import SymbolTableView from './SymbolTableView'
 import LearnView from './LearnView'
 import ExprTreeView from './ExprTreeView'
-<<<<<<< HEAD
-=======
 import ParseTraceView from './ParseTraceView'
->>>>>>> karim-radwan
 import './OutputPanel.css'
 
 interface OutputPanelProps {
@@ -53,7 +50,7 @@ function OutputPanel({
             className={`tab ${activeTab === 'tac' ? 'active' : ''}`}
             onClick={() => onTabChange('tac')}
           >
-            <span className="tab-icon">⚙️</span>
+            <span className="tab-icon">T</span>
             <span className="tab-label">TAC</span>
             {output?.tac && (
               <span className="tab-badge">{getTacLineCount()}</span>
@@ -64,7 +61,7 @@ function OutputPanel({
             className={`tab ${activeTab === 'ast' ? 'active' : ''}`}
             onClick={() => onTabChange('ast')}
           >
-            <span className="tab-icon">🌳</span>
+            <span className="tab-icon">AST</span>
             <span className="tab-label">AST</span>
           </button>
 
@@ -72,7 +69,7 @@ function OutputPanel({
             className={`tab ${activeTab === 'symbols' ? 'active' : ''}`}
             onClick={() => onTabChange('symbols')}
           >
-            <span className="tab-icon">📋</span>
+            <span className="tab-icon">S</span>
             <span className="tab-label">Symbols</span>
             {output?.symbolTable && (
               <span className="tab-badge">{getSymbolCount()}</span>
@@ -83,7 +80,7 @@ function OutputPanel({
             className={`tab ${activeTab === 'learn' ? 'active' : ''} tab-highlight`}
             onClick={() => onTabChange('learn')}
           >
-            <span className="tab-icon">🧩</span>
+            <span className="tab-icon">V</span>
             <span className="tab-label">Variable Visualizer</span>
           </button>
 
@@ -91,30 +88,27 @@ function OutputPanel({
             className={`tab ${activeTab === 'exprtree' ? 'active' : ''}`}
             onClick={() => onTabChange('exprtree')}
           >
-            <span className="tab-icon">🌿</span>
+            <span className="tab-icon">E</span>
             <span className="tab-label">Expr Tree</span>
           </button>
-<<<<<<< HEAD
-=======
 
           <button
             className={`tab ${activeTab === 'parsetrace' ? 'active' : ''}`}
             onClick={() => onTabChange('parsetrace')}
           >
-            <span className="tab-icon">📜</span>
+            <span className="tab-icon">P</span>
             <span className="tab-label">Parse Trace</span>
             {output?.parseTrace && (
               <span className="tab-badge">{output.parseTrace.length}</span>
             )}
           </button>
->>>>>>> karim-radwan
         </div>
       )}
 
       <div className="tab-content">
         {!output ? (
           <div className="empty-state">
-            <div className="empty-icon">📝</div>
+            <div className="empty-icon">Ready</div>
             <h3>Ready to Compile</h3>
             <p>Click the "Compile" button to analyze your code</p>
             <div className="example-code">
@@ -129,7 +123,7 @@ function OutputPanel({
         ) : hasErrors ? (
           <div className="error-state">
             <div className="error-header">
-              <div className="error-icon">❌</div>
+              <div className="error-icon">Error</div>
               <h3>Compilation Failed</h3>
               <p>Found {output.errors?.length || 0} error{(output.errors?.length || 0) > 1 ? 's' : ''} in your code</p>
             </div>
@@ -156,7 +150,7 @@ function OutputPanel({
               ))}
             </div>
             <div className="error-footer">
-              <p>💡 Fix the errors above and compile again</p>
+              <p>Tip: Fix the errors above and compile again</p>
             </div>
           </div>
         ) : (
@@ -184,12 +178,9 @@ function OutputPanel({
             {activeTab === 'exprtree' && (
               <ExprTreeView ast={output.ast} />
             )}
-<<<<<<< HEAD
-=======
             {activeTab === 'parsetrace' && (
               <ParseTraceView steps={output.parseTrace || []} />
             )}
->>>>>>> karim-radwan
           </>
         )}
       </div>

@@ -384,7 +384,18 @@ Node* parse(vector<tuple<string,string,int>> input) {
                 Node* node = new Node();
                 node->type = "Assignment";
                 node->lineNumber = getLineFromChildren(children);
-                node->children = {children[0], children[2]};
+                
+                // Check if it's a compound assignment (+=, -=, *=, /=)
+                if (children.size() >= 3 && 
+                    (children[1]->value == "+=" || children[1]->value == "-=" ||
+                     children[1]->value == "*=" || children[1]->value == "/=")) {
+                    // Store the operator for semantic analysis
+                    node->op = children[1]->value;
+                    node->children = {children[0], children[2]};
+                } else {
+                    // Regular assignment: ID = Expr or ArrayAccess = Expr
+                    node->children = {children[0], children[2]};
+                }
                 newNode = node;
             }
 

@@ -14,7 +14,7 @@ const PORT = 3003
 app.use(cors())
 app.use(express.json())
 
-// Path to the compiler project
+// Path to the compiler project — one level up from GUI/ is the project root
 const COMPILER_PATH = path.join(__dirname, '..', 'Array-Manipulation-using-LR-parsing--Karim-Ahmed')
 
 // Temporary directory for compilation
@@ -627,9 +627,14 @@ app.post('/api/compile', async (req, res) => {
     )
     
     let codegenOutput = ''
+    let codegenError = ''
     
     codegenProcess.stdout.on('data', (data) => {
       codegenOutput += data.toString()
+    })
+
+    codegenProcess.stderr.on('data', (data) => {
+      codegenError += data.toString()
     })
     
     const codegenExitCode = await new Promise((resolve) => {
@@ -638,10 +643,22 @@ app.post('/api/compile', async (req, res) => {
     })
 
     console.log('Codegen output:', codegenOutput)
+    if (codegenError) console.log('Codegen stderr:', codegenError)
     
     // Check if codegen passed
     if (codegenOutput.includes('Code generation successful') || codegenExitCode === 0) {
       phases.codegen = true
+    } else {
+      const cgErrLines = (codegenOutput + '\n' + codegenError).split('\n')
+      for (const line of cgErrLines) {
+        const m = line.match(/\[CodeGen(?:\s+Error)?\]\s*(.+)/i)
+        if (m && !m[1].includes('Code generation successful')) {
+          errors.push({ message: m[1].trim(), phase: 'codegen' })
+        }
+      }
+      if (!errors.some(e => e.phase === 'codegen')) {
+        errors.push({ message: 'Code generation failed', phase: 'codegen' })
+      }
     }
 
     // Read all output files
