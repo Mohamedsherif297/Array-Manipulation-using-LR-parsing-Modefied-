@@ -281,7 +281,7 @@
   left: 0;
   right: 0;
   height: 22.4px;
-  pointer-events: auto;
+  pointer-events: none;
   z-index: 2;
 }
 
@@ -308,10 +308,11 @@
   min-width: 220px;
   max-width: 420px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-  pointer-events: none;
+  pointer-events: auto;
 }
 
-.error-line-highlight:hover .error-inline-tooltip {
+/* Show tooltip when hovering over the code area where there's an error */
+.code-area:hover .error-line-highlight .error-inline-tooltip {
   display: flex;
   flex-direction: column;
   gap: 6px;
