@@ -1,16 +1,11 @@
 {
-  "m": {
-    "type": "int",
+  "z": {
+    "type": "bool",
     "scope": "function(main)",
     "isArray": false
   },
   "b": {
     "type": "int",
-    "scope": "function(main)",
-    "isArray": false
-  },
-  "d": {
-    "type": "bool",
     "scope": "function(main)",
     "isArray": false
   },
