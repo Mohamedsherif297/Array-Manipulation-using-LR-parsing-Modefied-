@@ -99,12 +99,22 @@ void Optimizer::constantFolding() {
 // OPTIMIZATION 2: CONSTANT PROPAGATION
 // Replaces variables with their constant values
 // Example: x = 5; y = x + 3  →  x = 5; y = 5 + 3
+// NOTE: LABEL / GOTO / IF_FALSE are control-flow barriers — we flush all
+//       tracked constants when we encounter one, because a variable modified
+//       inside a loop body must not be treated as constant on the next
+//       iteration.
 // ============================================================================
 void Optimizer::constantPropagation() {
     constantValues_.clear();
     
     for (auto& quad : ir_) {
         if (!quad.isAlive) continue;
+
+        // Control-flow barrier: flush all tracked constants
+        if (quad.op == "LABEL" || quad.op == "GOTO" || quad.op == "IF_FALSE") {
+            constantValues_.clear();
+            continue;
+        }
         
         // Track constant assignments
         if (quad.op == "ASSIGN" && isConstant(quad.arg1)) {
@@ -143,12 +153,20 @@ void Optimizer::constantPropagation() {
 // OPTIMIZATION 3: COMMON SUBEXPRESSION ELIMINATION (CSE)
 // Eliminates redundant computations
 // Example: t1 = a + b; t2 = a + b  →  t1 = a + b; t2 = t1
+// NOTE: LABEL is a barrier — reset the expression table at every label so
+//       we don't reuse values computed before a loop back-edge.
 // ============================================================================
 void Optimizer::commonSubexpressionElimination() {
     map<string, string> expressions; // expression -> result variable
     
     for (auto& quad : ir_) {
         if (!quad.isAlive) continue;
+
+        // Control-flow barrier: reset expression table
+        if (quad.op == "LABEL" || quad.op == "GOTO" || quad.op == "IF_FALSE") {
+            expressions.clear();
+            continue;
+        }
         
         // Only consider arithmetic operations
         if (quad.op == "+" || quad.op == "-" || quad.op == "*" || quad.op == "/") {
@@ -188,8 +206,9 @@ void Optimizer::commonSubexpressionElimination() {
 
 // ============================================================================
 // OPTIMIZATION 4: CODE MOVEMENT (Loop-Invariant Code Motion)
-// Moves loop-invariant computations outside loops
-// For now, we'll move constant computations to the beginning
+// Moves loop-invariant computations outside loops.
+// NOTE: We never move or reorder LABEL / GOTO / IF_FALSE instructions —
+//       doing so would corrupt the control-flow graph.
 // ============================================================================
 void Optimizer::codeMovement() {
     vector<OptQuad> constantComputations;
@@ -197,6 +216,12 @@ void Optimizer::codeMovement() {
     
     for (auto& quad : ir_) {
         if (!quad.isAlive) continue;
+
+        // Never move control-flow instructions
+        if (quad.op == "LABEL" || quad.op == "GOTO" || quad.op == "IF_FALSE") {
+            otherInstructions.push_back(quad);
+            continue;
+        }
         
         // Identify loop-invariant code (constant computations)
         if ((quad.op == "+" || quad.op == "-" || quad.op == "*" || quad.op == "/") &&
@@ -236,11 +261,11 @@ void Optimizer::codeMovement() {
 
 // ============================================================================
 // OPTIMIZATION 5: DEAD CODE ELIMINATION
-// Removes instructions whose results are never used
-// Example: t1 = 5; t2 = 3; return t2  →  t2 = 3; return t2
+// Removes instructions whose results are never used.
+// NOTE: LABEL / GOTO / IF_FALSE are never dead — they control execution flow.
+//       Temporaries used in IF_FALSE (condition temps) must also be kept.
 // ============================================================================
 void Optimizer::deadCodeElimination() {
-    // Build use-def chains
     variableUses_.clear();
     variableDefs_.clear();
     
@@ -249,12 +274,16 @@ void Optimizer::deadCodeElimination() {
         const auto& quad = ir_[i];
         if (!quad.isAlive) continue;
         
-        // Track uses
+        // Track uses (including the condition operand of IF_FALSE)
         if (!quad.arg1.empty() && !isConstant(quad.arg1)) {
             variableUses_[quad.arg1].insert(i);
         }
         if (!quad.arg2.empty() && !isConstant(quad.arg2)) {
             variableUses_[quad.arg2].insert(i);
+        }
+        // IF_FALSE uses arg1 as the condition
+        if (quad.op == "IF_FALSE" && !quad.arg1.empty()) {
+            variableUses_[quad.arg1].insert(i);
         }
         
         // Track definitions
@@ -268,14 +297,20 @@ void Optimizer::deadCodeElimination() {
         auto& quad = ir_[i];
         if (!quad.isAlive) continue;
         
-        // Skip DECL, STORE, and LOAD (they have side effects)
-        if (quad.op == "DECL" || quad.op == "STORE" || quad.op == "LOAD") {
+        // Never eliminate control-flow instructions
+        if (quad.op == "LABEL" || quad.op == "GOTO" || quad.op == "IF_FALSE") {
+            continue;
+        }
+        
+        // Skip DECL, STORE, LOAD (side effects)
+        // Note: PRINT, PRINTLN, READ are no longer generated (rejected at semantic analysis)
+        if (quad.op == "DECL"  || quad.op == "STORE" || quad.op == "LOAD" ||
+            quad.op == "PRINT" || quad.op == "PRINTLN" || quad.op == "READ") {
             continue;
         }
         
         // Check if result is never used
         if (!quad.result.empty()) {
-            // If it's a temporary and never used, it's dead
             if (isTemporary(quad.result) && variableUses_[quad.result].empty()) {
                 quad.isAlive = false;
                 stats_.deadCodeElimination++;

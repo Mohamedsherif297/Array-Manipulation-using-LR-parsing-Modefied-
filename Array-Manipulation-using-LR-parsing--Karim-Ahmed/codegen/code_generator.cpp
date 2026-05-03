@@ -70,7 +70,6 @@ bool CodeGenerator::writeIR(const string& filePath) const {
 void CodeGenerator::printIR(ostream& out) const {
     for (const Quad& q : ir_) {
         string line;
-        // Format each quad as a readable TAC line.
         if (q.op == "ASSIGN") {
             line = q.result + " = " + q.arg1;
         } else if (q.op == "LOAD") {
@@ -86,12 +85,19 @@ void CodeGenerator::printIR(ostream& out) const {
             line = "PRINTLN";
         } else if (q.op == "READ") {
             line = "READ " + q.result;
+        } else if (q.op == "LABEL") {
+            line = q.result + ":";          // e.g.  L1:
+        } else if (q.op == "GOTO") {
+            line = "GOTO " + q.result;
+        } else if (q.op == "IF_FALSE") {
+            line = "IF_FALSE " + q.arg1 + " GOTO " + q.result;
+        } else if (q.op == "INCR") {
+            line = q.result + " = " + q.result + " + 1";
         } else if (q.arg2.empty()) {
             line = q.result + " = " + q.op + " " + q.arg1;
         } else {
             line = q.result + " = " + q.arg1 + " " + q.op + " " + q.arg2;
         }
-        // Append source line annotation
         if (q.sourceLine > 0) {
             out << line << "  ; line:" << q.sourceLine << "\n";
         } else {
@@ -114,6 +120,10 @@ void CodeGenerator::emit(const string& op,
 
 string CodeGenerator::newTemp() {
     return "t" + to_string(++tempCounter_);
+}
+
+string CodeGenerator::newLabel() {
+    return "L" + to_string(++labelCounter_);
 }
 
 void CodeGenerator::error(const string& msg) {
@@ -151,14 +161,17 @@ void CodeGenerator::genStatement(shared_ptr<ASTNode> node) {
 
     const string& t = node->type;
 
-    if (t == "FunctionDef")  { genFunctionDef(node); return; }
-    if (t == "Declaration")  { genDecl(node);       return; }
-    if (t == "DeclAssign")   { genDeclAssign(node);  return; }
-    if (t == "Assignment")   { genAssign(node);      return; }
-    if (t == "Output")       { genOutput(node);      return; }
-    if (t == "Input")        { genInput(node);       return; }
-    if (t == "Program")      { genProgram(node);     return; }
-    if (t == "StmtList")     {
+    if (t == "FunctionDef")    { genFunctionDef(node); return; }
+    if (t == "Declaration")    { genDecl(node);        return; }
+    if (t == "DeclAssign")     { genDeclAssign(node);  return; }
+    if (t == "Assignment")     { genAssign(node);      return; }
+    if (t == "Output")         { genOutput(node);      return; }
+    if (t == "Input")          { genInput(node);       return; }
+    if (t == "ForStmt")        { genForStmt(node);     return; }
+    if (t == "PreIncrement" ||
+        t == "PostIncrement")  { genIncrement(node);   return; }
+    if (t == "Program")        { genProgram(node);     return; }
+    if (t == "StmtList")       {
         for (auto& child : node->children)
             genStatement(child);
         return;
@@ -170,41 +183,53 @@ void CodeGenerator::genStatement(shared_ptr<ASTNode> node) {
 }
 
 void CodeGenerator::genOutput(shared_ptr<ASTNode> node) {
-    // cout << expr << expr ...
-    for (auto& child : node->children) {
-        if (child->type == "EndLine") {
-            emit("PRINTLN", "", "", "");
-            continue;
-        }
-        const string value = genExpr(child);
-        if (!value.empty()) {
-            emit("PRINT", value, "", "");
-        }
-    }
+    // cout statements are allowed in syntax and semantic analysis
+    // but do NOT generate any TAC code - skip code generation entirely
+    return;
 }
 
 void CodeGenerator::genInput(shared_ptr<ASTNode> node) {
-    // cin >> target >> target ...
-    for (auto& child : node->children) {
-        if (child->type == "ID") {
-            emit("READ", "", "", child->value);
-        } else if (child->type == "ArrayAccess") {
-            // Reuse assignment path by reading to a temp then storing into target.
-            string tIn = newTemp();
-            emit("READ", "", "", tIn);
+    // cin statements are allowed in syntax and semantic analysis
+    // but do NOT generate any TAC code - skip code generation entirely
+    return;
+}
 
-            auto fakeAssign = make_shared<ASTNode>();
-            fakeAssign->type = "Assignment";
-            fakeAssign->children.push_back(child);
+// ---------------------------------------------------------------------------
+// For loop:  for ( ForInit ; ForCond ; ForUpdate ) Body
+//
+// For loops are supported in syntax and semantic analysis but NOT in code generation.
+// This function intentionally does nothing - for loops will not generate any IR.
+// ---------------------------------------------------------------------------
 
-            auto rhsTemp = make_shared<ASTNode>();
-            rhsTemp->type = "ID";
-            rhsTemp->value = tIn;
-            fakeAssign->children.push_back(rhsTemp);
+void CodeGenerator::genForStmt(shared_ptr<ASTNode> node) {
+    // For loops are not supported in code generation - skip
+    // This should be allowed by semantic analysis but not generate any code
+    return;
+}
 
-            genAssign(fakeAssign);
-        }
-    }
+// ---------------------------------------------------------------------------
+// Condition evaluation for ForCond (no longer used - for loops not generated)
+// ---------------------------------------------------------------------------
+
+string CodeGenerator::genCondition(shared_ptr<ASTNode> node) {
+    // Not used - for loops are not generated
+    return "";
+}
+
+// ---------------------------------------------------------------------------
+// Increment:  ++i  (PreIncrement)  or  i++  (PostIncrement)
+//   Both emit:  i = i + 1
+//   The difference (pre vs post) matters only when used as an expression;
+//   as a statement they are identical.
+// ---------------------------------------------------------------------------
+
+void CodeGenerator::genIncrement(shared_ptr<ASTNode> node) {
+    if (node->children.empty()) return;
+    string varName = node->children[0]->value;
+    // varName = varName + 1
+    string t = newTemp();
+    emit("+", varName, "1", t);
+    emit("ASSIGN", t, "", varName);
 }
 
 // ---------------------------------------------------------------------------
@@ -468,6 +493,32 @@ string CodeGenerator::genExpr(shared_ptr<ASTNode> node) {
 
     // ---- Array element read ----
     if (t == "ArrayAccess") return genArrayAccess(node);
+
+    // ---- Pre/Post increment used as expression ----
+    if (t == "PreIncrement") {
+        // ++i: increment first, return new value
+        if (!node->children.empty()) {
+            string varName = node->children[0]->value;
+            string tmp = newTemp();
+            emit("+", varName, "1", tmp);
+            emit("ASSIGN", tmp, "", varName);
+            return varName;   // return the incremented value
+        }
+        return "";
+    }
+    if (t == "PostIncrement") {
+        // i++: return old value, then increment
+        if (!node->children.empty()) {
+            string varName = node->children[0]->value;
+            string oldVal = newTemp();
+            emit("ASSIGN", varName, "", oldVal);  // save old value
+            string tmp = newTemp();
+            emit("+", varName, "1", tmp);
+            emit("ASSIGN", tmp, "", varName);
+            return oldVal;   // return the old value
+        }
+        return "";
+    }
 
     // ---- Binary arithmetic operators ----
     if (t == "+" || t == "-" || t == "*" || t == "/")

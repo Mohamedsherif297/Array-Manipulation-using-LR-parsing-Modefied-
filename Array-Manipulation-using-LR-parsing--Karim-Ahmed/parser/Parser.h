@@ -197,20 +197,77 @@ Node* parse(vector<tuple<string,string,int>> input) {
 
             // ================= PROGRAM =================
             if (p.lhs == "Program") {
-                if (children.size() == 2) {
-                    // GlobalList FunctionDef — wrap into a Program node
-                    Node* node = new Node();
-                    node->type = "Program";
-                    node->lineNumber = getLineFromChildren(children);
-                    // Flatten global decls as children, then append FunctionDef
-                    for (auto* c : children[0]->children)
+                Node* node = new Node();
+                node->type = "Program";
+                node->lineNumber = getLineFromChildren(children);
+                
+                if (children.size() == 3) {
+                    // Preamble GlobalList FunctionDef
+                    for (auto* c : children[0]->children) // Preamble items
                         node->children.push_back(c);
-                    node->children.push_back(children[1]); // FunctionDef
-                    newNode = node;
+                    for (auto* c : children[1]->children) // Global decls
+                        node->children.push_back(c);
+                    node->children.push_back(children[2]); // FunctionDef
+                } else if (children.size() == 2) {
+                    if (children[0]->type == "Preamble") {
+                        // Preamble FunctionDef
+                        for (auto* c : children[0]->children)
+                            node->children.push_back(c);
+                        node->children.push_back(children[1]);
+                    } else {
+                        // GlobalList FunctionDef
+                        for (auto* c : children[0]->children)
+                            node->children.push_back(c);
+                        node->children.push_back(children[1]);
+                    }
                 } else {
-                    // Just FunctionDef — keep existing behaviour
-                    newNode = children[0];
+                    // Just FunctionDef
+                    node->children.push_back(children[0]);
                 }
+                
+                newNode = node;
+            }
+            
+            // ================= PREAMBLE =================
+            else if (p.lhs == "Preamble") {
+                Node* node = new Node();
+                node->type = "Preamble";
+                node->lineNumber = getLineFromChildren(children);
+                if (children.size() == 2) {
+                    // Preamble PreambleStmt
+                    node->children = children[0]->children;
+                    node->children.push_back(children[1]);
+                } else {
+                    // PreambleStmt
+                    node->children.push_back(children[0]);
+                }
+                newNode = node;
+            }
+            
+            // ================= PREAMBLE STMT =================
+            else if (p.lhs == "PreambleStmt") {
+                newNode = children[0]; // transparent — IncludeStmt or UsingStmt
+            }
+            
+            // ================= INCLUDE STMT =================
+            else if (p.lhs == "IncludeStmt") {
+                // # include < iostream >
+                // children[0] = #, children[1] = include, children[2] = <, children[3] = iostream, children[4] = >
+                Node* node = new Node();
+                node->type = "IncludeStmt";
+                node->value = "iostream"; // Hardcoded since we only support iostream
+                node->lineNumber = getLineFromChildren(children);
+                newNode = node;
+            }
+            
+            // ================= USING STMT =================
+            else if (p.lhs == "UsingStmt") {
+                // using namespace std ;
+                Node* node = new Node();
+                node->type = "UsingStmt";
+                node->value = "std";
+                node->lineNumber = getLineFromChildren(children);
+                newNode = node;
             }
 
             // ================= GLOBAL LIST =================
@@ -268,41 +325,54 @@ Node* parse(vector<tuple<string,string,int>> input) {
             // ================= DECL =================
             else if (p.lhs == "DeclStmt") {
                 Node* node = new Node();
-                node->type = "DeclStmt";
+                node->type = "Declaration";
                 node->lineNumber = getLineFromChildren(children);
+                
+                // DeclStmt → Type DeclList ;
+                // children[0] = Type, children[1] = DeclList, children[2] = ;
                 node->children.push_back(children[0]); // Type
-                node->children.push_back(children[1]); // DeclList
+                
+                // Flatten DeclList into individual declarations
+                for (auto* decl : children[1]->children) {
+                    node->children.push_back(decl);
+                }
                 
                 newNode = node;
             }
-
+            
             // ================= DECL LIST =================
             else if (p.lhs == "DeclList") {
                 Node* node = new Node();
                 node->type = "DeclList";
                 node->lineNumber = getLineFromChildren(children);
-
-                if (children.size() == 3) {
-                    // DeclList , Declarator
-                    node->children = children[0]->children;
-                    node->children.push_back(children[2]);
-                } else {
-                    // Declarator
+                
+                if (children.size() == 1) {
+                    // DeclList → Declarator
                     node->children.push_back(children[0]);
+                } else if (children.size() == 3) {
+                    // DeclList → DeclList , Declarator
+                    // Flatten the list
+                    for (auto* child : children[0]->children) {
+                        node->children.push_back(child);
+                    }
+                    node->children.push_back(children[2]);
                 }
-
+                
                 newNode = node;
             }
-
+            
             // ================= DECLARATOR =================
             else if (p.lhs == "Declarator") {
                 Node* node = new Node();
                 node->type = "Declarator";
                 node->lineNumber = getLineFromChildren(children);
-                node->children.push_back(children[0]); // ID
                 
-                // Check if there are array dimensions (ID ArrayDims)
-                if (children.size() == 2) {
+                if (children.size() == 1) {
+                    // Declarator → ID
+                    node->children.push_back(children[0]);
+                } else if (children.size() == 2) {
+                    // Declarator → ID ArrayDims
+                    node->children.push_back(children[0]); // ID
                     node->children.push_back(children[1]); // ArrayDims
                 }
                 
@@ -328,120 +398,6 @@ Node* parse(vector<tuple<string,string,int>> input) {
                     node->children.push_back(children[1]); // expression
                 }
                 // else: return ; (no expression)
-                newNode = node;
-            }
-
-            // ================= FOR LOOP (CFG only — AST node built, no semantic/codegen) =================
-            else if (p.lhs == "ForStmt") {
-                Node* node = new Node();
-                node->type = "ForStmt";
-                node->lineNumber = children[0]->lineNumber;
-                if (children.size() == 11) {
-                    // for ( ForInit ; ForCond ; ForUpdate ) { StmtList }
-                    // idx: 0=for 1=( 2=ForInit 3=; 4=ForCond 5=; 6=ForUpdate 7=) 8={ 9=StmtList 10=}
-                    node->children.push_back(children[2]); // init
-                    node->children.push_back(children[4]); // condition
-                    node->children.push_back(children[6]); // update
-                    node->children.push_back(children[9]); // body (StmtList)
-                } else {
-                    // for ( ForInit ; ForCond ; ForUpdate ) Stmt  (braceless)
-                    // idx: 0=for 1=( 2=ForInit 3=; 4=ForCond 5=; 6=ForUpdate 7=) 8=Stmt
-                    node->children.push_back(children[2]); // init
-                    node->children.push_back(children[4]); // condition
-                    node->children.push_back(children[6]); // update
-                    node->children.push_back(children[8]); // body (single Stmt)
-                }
-                newNode = node;
-            }
-
-            else if (p.lhs == "ForCond") {
-                Node* node = new Node();
-                node->lineNumber = getLineFromChildren(children);
-                if (children.size() == 3) {
-                    // Expr RelOp Expr
-                    node->type = "ForCond";
-                    node->children.push_back(children[0]); // left Expr
-                    node->children.push_back(children[1]); // RelOp
-                    node->children.push_back(children[2]); // right Expr
-                } else {
-                    // plain Expr
-                    node->type = "ForCond";
-                    node->children.push_back(children[0]);
-                }
-                newNode = node;
-            }
-
-            else if (p.lhs == "RelOp") {
-                // Transparent — just pass the operator token through
-                newNode = children[0];
-            }
-
-            else if (p.lhs == "ForInit") {
-                Node* node = new Node();
-                node->lineNumber = getLineFromChildren(children);
-                node->type = "ForInit";
-                if (children.size() == 4) {
-                    // Type ID = Expr
-                    node->children.push_back(children[0]); // Type
-                    node->children.push_back(children[1]); // ID
-                    node->children.push_back(children[3]); // Expr
-                } else if (children.size() == 2) {
-                    // Type ID  (declaration only, no initializer)
-                    node->children.push_back(children[0]); // Type
-                    node->children.push_back(children[1]); // ID
-                } else {
-                    // ID = Expr  (plain assignment, 3 children)
-                    node->children.push_back(children[0]); // ID
-                    node->children.push_back(children[2]); // Expr
-                }
-                newNode = node;
-            }
-
-            else if (p.lhs == "ForUpdate") {
-                // IncrExpr  OR  ID = Expr
-                if (children.size() == 1) {
-                    newNode = children[0]; // IncrExpr node
-                } else {
-                    // ID = Expr
-                    Node* node = new Node();
-                    node->type = "ForUpdate";
-                    node->lineNumber = getLineFromChildren(children);
-                    node->children.push_back(children[0]); // ID
-                    node->children.push_back(children[2]); // Expr
-                    newNode = node;
-                }
-            }
-
-            else if (p.lhs == "IncrExpr") {
-                // ++ID  or  ID++  (used inside for-update, no semicolon)
-                Node* node = new Node();
-                node->lineNumber = getLineFromChildren(children);
-                if (children[0]->type == "++" || children[0]->value == "++") {
-                    // ++ID  — pre-increment
-                    node->type = "PreIncrement";
-                    node->children.push_back(children[1]); // ID
-                } else {
-                    // ID++  — post-increment
-                    node->type = "PostIncrement";
-                    node->children.push_back(children[0]); // ID
-                }
-                newNode = node;
-            }
-
-            // ================= INCREMENT STATEMENTS (standalone with semicolon) =================
-            else if (p.lhs == "IncrStmt") {
-                // ++ID;  or  ID++;
-                Node* node = new Node();
-                node->lineNumber = getLineFromChildren(children);
-                if (children[0]->type == "++" || children[0]->value == "++") {
-                    // ++ID;  — pre-increment statement
-                    node->type = "PreIncrement";
-                    node->children.push_back(children[1]); // ID
-                } else {
-                    // ID++;  — post-increment statement
-                    node->type = "PostIncrement";
-                    node->children.push_back(children[0]); // ID
-                }
                 newNode = node;
             }
 
@@ -548,7 +504,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
             // ================= ARRAY DIMS =================
             else if (p.lhs == "ArrayDims") {
                 if (children.size() == 4) {
-                    // Multi-dimensional: ArrayDims [ NUM/ID ]
+                    // Multi-dimensional: ArrayDims [ NUM ]
                     Node* prev = children[0];
 
                     if (prev->type != "Dimensions") {
@@ -557,7 +513,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
                         dims->lineNumber = prev->lineNumber;
 
                         Node* first = new Node();
-                        first->type = (prev->type == "ID") ? "DimVar" : "Number";
+                        first->type = "Number";
                         first->value = prev->value;
                         first->lineNumber = prev->lineNumber;
                         dims->children.push_back(first);
@@ -566,18 +522,16 @@ Node* parse(vector<tuple<string,string,int>> input) {
                     }
 
                     Node* newDim = new Node();
-                    // children[2] is NUM or ID
-                    newDim->type = (children[2]->type == "ID") ? "DimVar" : "Number";
+                    newDim->type = "Number";
                     newDim->value = children[2]->value;
                     newDim->lineNumber = children[2]->lineNumber;
 
                     prev->children.push_back(newDim);
                     newNode = prev;
                 } else if (children.size() == 3) {
-                    // Single dimension: [ NUM ] or [ ID ]
+                    // Single dimension with size: [ NUM ]
                     Node* node = new Node();
-                    // children[1] is NUM or ID
-                    node->type = (children[1]->type == "ID") ? "DimVar" : "Number";
+                    node->type = "Number";
                     node->value = children[1]->value;
                     node->lineNumber = children[1]->lineNumber;
                     newNode = node;
@@ -585,10 +539,11 @@ Node* parse(vector<tuple<string,string,int>> input) {
                     // Empty brackets (inferred size): [ ]
                     Node* node = new Node();
                     node->type = "InferredSize";
-                    node->value = "0";
+                    node->value = "0";  // Placeholder, will be inferred from initializer
                     node->lineNumber = getLineFromChildren(children);
                     newNode = node;
                 } else {
+                    // Fallback for unexpected cases
                     Node* node = new Node();
                     node->type = "ArrayDims";
                     node->lineNumber = getLineFromChildren(children);
@@ -655,22 +610,7 @@ Node* parse(vector<tuple<string,string,int>> input) {
 
             else if (p.lhs == "Factor") {
                 if (children.size() == 3) {
-                    // ( Expr )
                     newNode = children[1];
-                } else if (children.size() == 2) {
-                    // ++ID  or  ID++  used as a factor (expression context)
-                    Node* node = new Node();
-                    node->lineNumber = getLineFromChildren(children);
-                    if (children[0]->type == "++" || children[0]->value == "++") {
-                        // ++ID — pre-increment: increment first, return new value
-                        node->type = "PreIncrement";
-                        node->children.push_back(children[1]); // ID
-                    } else {
-                        // ID++ — post-increment: return current value, then increment
-                        node->type = "PostIncrement";
-                        node->children.push_back(children[0]); // ID
-                    }
-                    newNode = node;
                 } else if (children[0]->type == "endl" || children[0]->type == "endLine") {
                     Node* node = new Node();
                     node->type = "EndLine";

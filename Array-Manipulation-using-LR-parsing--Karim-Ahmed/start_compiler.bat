@@ -7,18 +7,18 @@ echo Starting the compiler system...
 echo.
 
 REM Check if Main.exe exists
-if not exist "%~dp0Array-Manipulation-using-LR-parsing--Karim-Ahmed\Main.exe" (
+if not exist "%~dp0Main.exe" (
     echo Compiling the main compiler...
-    pushd "%~dp0Array-Manipulation-using-LR-parsing--Karim-Ahmed"
-    call compile_main_only.bat
+    pushd "%~dp0"
+    g++ -std=c++17 Main.cpp -o Main.exe
     popd
     echo.
 )
 
 REM Check if node_modules exists, install if missing
-if not exist "%~dp0GUI\node_modules" (
+if not exist "%~dp0..\GUI\node_modules" (
     echo node_modules not found. Running npm install...
-    pushd "%~dp0GUI"
+    pushd "%~dp0..\GUI"
     cmd /c "npm install"
     popd
     echo.
@@ -33,11 +33,11 @@ echo Press Ctrl+C in each window to stop the servers
 echo.
 
 REM Start backend server in new window
-start "Backend Server" cmd /k "cd /d "%~dp0GUI" && node server.js"
+start "Backend Server" cmd /k "cd /d "%~dp0..\GUI" && node server.js"
 timeout /t 3 /nobreak >nul
 
 REM Start frontend server in new window
-start "Frontend Server" cmd /k "cd /d "%~dp0GUI" && npm run dev"
+start "Frontend Server" cmd /k "cd /d "%~dp0..\GUI" && npm run dev"
 timeout /t 3 /nobreak >nul
 
 REM Open browser

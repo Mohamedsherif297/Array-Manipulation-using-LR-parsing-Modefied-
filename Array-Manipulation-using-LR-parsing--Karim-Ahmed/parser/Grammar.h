@@ -16,8 +16,20 @@ inline vector <Production> grammar = {
 
 {"S'", {"Program"}},
 
+{"Program", {"Preamble", "GlobalList", "FunctionDef"}},
+{"Program", {"Preamble", "FunctionDef"}},
 {"Program", {"GlobalList", "FunctionDef"}},
 {"Program", {"FunctionDef"}},
+
+{"Preamble", {"Preamble", "PreambleStmt"}},
+{"Preamble", {"PreambleStmt"}},
+
+{"PreambleStmt", {"IncludeStmt"}},
+{"PreambleStmt", {"UsingStmt"}},
+
+{"IncludeStmt", {"#", "include", "<", "iostream", ">"}},
+
+{"UsingStmt", {"using", "namespace", "std", ";"}},
 
 {"GlobalList", {"GlobalList", "GlobalDecl"}},
 {"GlobalList", {"GlobalDecl"}},
@@ -39,11 +51,9 @@ inline vector <Production> grammar = {
 
 {"Stmt", {"ReturnStmt"}},
 
-{"Stmt", {"IoStmt"}},
-
 {"Stmt", {"ForStmt"}},
 
-{"Stmt", {"IncrStmt"}},
+{"Stmt", {"IoStmt"}},
 
 {"DeclStmt", {"Type", "DeclList", ";"}},
 
@@ -65,52 +75,15 @@ inline vector <Production> grammar = {
 
 {"ReturnStmt", {"return", ";"}},
 
-// ===== FOR LOOP (CFG only — no semantic/codegen implementation) =====
-// Braced body:   for ( ForInit ; ForCond ; ForUpdate ) { StmtList }
-// Braceless body: for ( ForInit ; ForCond ; ForUpdate ) Stmt
 {"ForStmt", {"for", "(", "ForInit", ";", "ForCond", ";", "ForUpdate", ")", "{", "StmtList", "}"}},
-{"ForStmt", {"for", "(", "ForInit", ";", "ForCond", ";", "ForUpdate", ")", "Stmt"}},
+{"ForStmt", {"for", "(", "ForInit", ";", "ForCond", ";", "ForUpdate", ")", "{", "}"}},
 
-// ForInit: declaration with init, declaration only, or plain assignment
 {"ForInit", {"Type", "ID", "=", "Expr"}},
-{"ForInit", {"Type", "ID"}},
 {"ForInit", {"ID", "=", "Expr"}},
 
-// ForCond: a comparison expression or plain expression
-{"ForCond", {"Expr", "RelOp", "Expr"}},
 {"ForCond", {"Expr"}},
 
-// Relational operators
-{"RelOp", {">"}},
-{"RelOp", {"<"}},
-{"RelOp", {">="}},
-{"RelOp", {"<="}},
-{"RelOp", {"=="}},
-{"RelOp", {"!="}},
-
-// ForUpdate: increment/decrement or assignment
-{"ForUpdate", {"IncrExpr"}},
 {"ForUpdate", {"ID", "=", "Expr"}},
-
-// IncrExpr: used inside for-update (no semicolon)
-{"IncrExpr", {"++", "ID"}},
-{"IncrExpr", {"ID", "++"}},
-
-// ===== INCREMENT STATEMENTS (standalone, with semicolon — fully implemented) =====
-{"IncrStmt", {"++", "ID", ";"}},
-{"IncrStmt", {"ID", "++", ";"}},
-
-{"IoStmt", {"cout", "CoutList", ";"}},
-{"IoStmt", {"cin", "CinList", ";"}},
-
-{"CoutList", {"CoutList", "<<", "Expr"}},
-{"CoutList", {"<<", "Expr"}},
-
-{"CinList", {"CinList", ">>", "InputTarget"}},
-{"CinList", {">>", "InputTarget"}},
-
-{"InputTarget", {"ID"}},
-{"InputTarget", {"ArrayAccess"}},
 
 // ===== ARRAY LITERAL (UPDATED) =====
 {"ArrayLiteral", {"{", "Elements", "}"}}, 
@@ -129,9 +102,7 @@ inline vector <Production> grammar = {
 {"ExprList", {"Expr"}},
 
 {"ArrayDims", {"ArrayDims", "[", "NUM", "]"}},
-{"ArrayDims", {"ArrayDims", "[", "ID", "]"}},
 {"ArrayDims", {"[", "NUM", "]"}},
-{"ArrayDims", {"[", "ID", "]"}},
 {"ArrayDims", {"[", "]"}},
 
 {"Expr", {"Expr", "+", "Term"}},
@@ -143,49 +114,82 @@ inline vector <Production> grammar = {
 {"Term", {"Factor"}},
 
 {"Factor", {"(", "Expr", ")"}},
+{"Factor", {"Comparison"}},
 {"Factor", {"ID"}},
 {"Factor", {"NUM"}},
 {"Factor", {"ArrayAccess"}},
 {"Factor", {"STRING"}},
 {"Factor", {"CHAR"}},
+{"Factor", {"true"}},
+{"Factor", {"false"}},
 {"Factor", {"endl"}},
 {"Factor", {"endLine"}},
-{"Factor", {"++", "ID"}},
-{"Factor", {"ID", "++"}},
+
+{"Comparison", {"CompTerm", "<", "CompTerm"}},
+{"Comparison", {"CompTerm", ">", "CompTerm"}},
+{"Comparison", {"CompTerm", "<=", "CompTerm"}},
+{"Comparison", {"CompTerm", ">=", "CompTerm"}},
+{"Comparison", {"CompTerm", "==", "CompTerm"}},
+{"Comparison", {"CompTerm", "!=", "CompTerm"}},
+
+{"CompTerm", {"ID"}},
+{"CompTerm", {"NUM"}},
+{"CompTerm", {"ArrayAccess"}},
 
 {"Type", {"int"}},
 {"Type", {"float"}},
 {"Type", {"double"}},
 {"Type", {"char"}},
-{"Type", {"string"}}
+{"Type", {"string"}},
+{"Type", {"bool"}},
+
+{"IoStmt", {"cout", "CoutList", ";"}},
+{"IoStmt", {"cin", "CinList", ";"}},
+
+{"CoutList", {"CoutList", "<<", "Expr"}},
+{"CoutList", {"<<", "Expr"}},
+
+{"CinList", {"CinList", ">>", "InputTarget"}},
+{"CinList", {">>", "InputTarget"}},
+
+{"InputTarget", {"ID"}},
+{"InputTarget", {"ArrayAccess"}}
 
 };
 
 inline set<string> terminals = {
 
-"int","float","double","char","string",
+"int","float","double","char","string","bool",
 
 "ID","NUM","STRING","CHAR",
 
 "+","-","*","/","=",";",
 
-"<<",">>","++",
-
-">","<",">=","<=","==","!=",
+"<",">","<=",">=","==","!=","<<",">>",
 
 "[","]","{","}",",",
 
-"(",")","return","cout","cin","endl","endLine","for","$"
+"(",")","return","endl","endLine","for",
+
+"true","false",
+
+"#","include","iostream","using","namespace","std",
+
+"cin","cout",
+
+"$"
 
 };
 
 inline set<string> nonTerminals = {
 
-"S'","Program","FunctionDef","GlobalList","GlobalDecl","StmtList","Stmt",
+"S'","Program","Preamble","PreambleStmt","IncludeStmt","UsingStmt",
+
+"FunctionDef","GlobalList","GlobalDecl","StmtList","Stmt",
 
 "DeclStmt","DeclList","Declarator","AssignStmt","DeclAssignStmt","ReturnStmt",
 
-"ForStmt","ForInit","ForCond","ForUpdate","IncrExpr","IncrStmt","RelOp",
+"ForStmt","ForInit","ForCond","ForUpdate",
 
 "IoStmt","CoutList","CinList","InputTarget",
 
@@ -193,7 +197,7 @@ inline set<string> nonTerminals = {
 
 "ArrayAccess","ArrayDims","Expr","Term",
 
-"Factor","Type","ExprList"
+"Factor","Comparison","CompTerm","Type","ExprList"
 
 };
 

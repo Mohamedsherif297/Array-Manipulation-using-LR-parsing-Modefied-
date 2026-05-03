@@ -31,22 +31,28 @@ private:
     SemanticSymbolTable& symTable_;
     vector<SemanticError> errors_;
     string currentScope_ = "global";   // tracks current scope during traversal
+    
+    bool insideForLoop_ = false;  // Track if we're inside a for loop
+    bool hasIostreamInclude_ = false;  // Track if #include <iostream> is present
+    bool hasUsingNamespaceStd_ = false;  // Track if using namespace std; is present
+    bool usesCinOrCout_ = false;  // Track if cin or cout is used
 
     void addError(const string& msg, const ASTNode& node);
+    
+    // Scan for includes and using statements
+    void scanForPreamble(shared_ptr<ASTNode> node);
 
     // Node visitors
     void visitFunctionDef(shared_ptr<ASTNode> node);
     void visitProgram(shared_ptr<ASTNode> node);
     void visitStatement(shared_ptr<ASTNode> node);
-    void visitDeclStmt(shared_ptr<ASTNode> node);
     void visitDecl(shared_ptr<ASTNode> node);
     void visitDeclAssign(shared_ptr<ASTNode> node);
     void visitAssign(shared_ptr<ASTNode> node);
     void visitOutput(shared_ptr<ASTNode> node);
     void visitInput(shared_ptr<ASTNode> node);
     void visitReturn(shared_ptr<ASTNode> node);
-    void visitForStmt(shared_ptr<ASTNode> node);  // for loop — full semantic validation
-    void visitIncrement(shared_ptr<ASTNode> node); // ++i / i++
+    void visitForStmt(shared_ptr<ASTNode> node);
     string visitExpr(shared_ptr<ASTNode> node);   // returns resolved type
     string visitArrayAccess(shared_ptr<ASTNode> node);
 

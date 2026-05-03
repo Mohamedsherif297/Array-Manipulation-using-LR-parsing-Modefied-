@@ -1,7 +1,7 @@
 #include "semantic_analyzer.h"
 #include <iostream>
 #include <stdexcept>
-#include <functional>
+#include <fstream>
 
 using namespace std;
 
@@ -76,12 +76,56 @@ bool SemanticAnalyzer::isAssignmentCompatible(const string& lhsType, const strin
 }
 
 // ---------------------------------------------------------------------------
+// Scan for preamble statements (includes and using)
+// ---------------------------------------------------------------------------
+
+void SemanticAnalyzer::scanForPreamble(shared_ptr<ASTNode> node) {
+    if (!node) return;
+    
+    if (node->type == "IncludeStmt") {
+        if (node->value == "iostream" || node->value == "<iostream>") {
+            hasIostreamInclude_ = true;
+        }
+    } else if (node->type == "UsingStmt") {
+        if (node->value == "std") {
+            hasUsingNamespaceStd_ = true;
+        }
+    }
+    
+    // Recursively scan all children
+    for (auto& child : node->children) {
+        scanForPreamble(child);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
 bool SemanticAnalyzer::analyze(shared_ptr<ASTNode> root) {
     if (!root) return false;
     
+    // Reset flags
+    hasIostreamInclude_ = false;
+    hasUsingNamespaceStd_ = false;
+    usesCinOrCout_ = false;
+    
+    // Read lexer flags from file
+    ifstream lexerFlagsFile("lexer_flags.txt");
+    if (lexerFlagsFile) {
+        string line;
+        while (getline(lexerFlagsFile, line)) {
+            if (line.find("hasIostreamInclude=1") != string::npos) {
+                hasIostreamInclude_ = true;
+            }
+        }
+        lexerFlagsFile.close();
+    }
+    
+    // PASS 1: Scan for #include and using namespace std (backup method)
+    scanForPreamble(root);
+    
+    // PASS 2: Analyze the program structure
     if (root->type == "FunctionDef") {
         visitFunctionDef(root);
     } else if (root->type == "Program") {
@@ -89,6 +133,18 @@ bool SemanticAnalyzer::analyze(shared_ptr<ASTNode> root) {
     } else {
         visitStatement(root);
     }
+    
+    // PASS 3: Final validation - check if cin/cout used without iostream
+    if (usesCinOrCout_ && !hasIostreamInclude_) {
+        SemanticError err;
+        err.message = "'cin' or 'cout' requires '#include <iostream>'";
+        err.nodeType = "Program";
+        err.nodeValue = "";
+        err.line = 1;
+        errors_.push_back(err);
+        cerr << "[Semantic Error] " << err.message << "\n";
+    }
+    
     return errors_.empty();
 }
 
@@ -126,23 +182,16 @@ void SemanticAnalyzer::visitFunctionDef(shared_ptr<ASTNode> node) {
     string previousScope = currentScope_;
     currentScope_ = "function(" + funcName + ")";
 
-    // Track if we find a return statement (including inside for loops)
+    // Track if we find a return statement
     bool hasReturn = false;
-
-    // Helper: recursively check if a node or its descendants contain a Return
-    function<bool(shared_ptr<ASTNode>)> containsReturn = [&](shared_ptr<ASTNode> n) -> bool {
-        if (!n) return false;
-        if (n->type == "Return") return true;
-        for (auto& c : n->children)
-            if (containsReturn(c)) return true;
-        return false;
-    };
     
     // Visit the function body (StmtList)
     auto& body = node->children[2];
     if (body->type == "StmtList") {
         for (auto& stmt : body->children) {
-            if (containsReturn(stmt)) hasReturn = true;
+            if (stmt->type == "Return") {
+                hasReturn = true;
+            }
             visitStatement(stmt);
         }
     }
@@ -158,16 +207,32 @@ void SemanticAnalyzer::visitFunctionDef(shared_ptr<ASTNode> node) {
 
 void SemanticAnalyzer::visitProgram(shared_ptr<ASTNode> node) {
     node->dataType = "void";
+    
+    // Process all children (includes, using, declarations, and function definitions)
     for (auto& child : node->children) {
+        // Skip preamble statements (already processed in scanForPreamble)
+        if (child->type == "IncludeStmt" || child->type == "UsingStmt" || 
+            child->type == "Preamble" || child->type == "PreambleStmt") {
+            continue;
+        }
+        
         // Global declarations come before FunctionDef
         if (child->type == "FunctionDef") {
             visitFunctionDef(child);
-        } else {
+        } else if (child->type != "GlobalList") {
             // Global DeclStmt / DeclAssignStmt — visit with global scope
             string savedScope = currentScope_;
             currentScope_ = "global";
             visitStatement(child);
             currentScope_ = savedScope;
+        } else if (child->type == "GlobalList") {
+            // Process GlobalList children
+            for (auto& globalChild : child->children) {
+                string savedScope = currentScope_;
+                currentScope_ = "global";
+                visitStatement(globalChild);
+                currentScope_ = savedScope;
+            }
         }
     }
 }
@@ -176,7 +241,6 @@ void SemanticAnalyzer::visitStatement(shared_ptr<ASTNode> node) {
     if (!node) return;
 
     if (node->type == "Declaration")   { visitDecl(node);       return; }
-    if (node->type == "DeclStmt")      { visitDeclStmt(node);   return; }
     if (node->type == "DeclAssign")    { visitDeclAssign(node);  return; }
     if (node->type == "Assignment")    { visitAssign(node);      return; }
     if (node->type == "Output")        { visitOutput(node);      return; }
@@ -184,8 +248,6 @@ void SemanticAnalyzer::visitStatement(shared_ptr<ASTNode> node) {
     if (node->type == "Return")        { visitReturn(node);      return; }
     if (node->type == "Program")       { visitProgram(node);     return; }
     if (node->type == "FunctionDef")   { visitFunctionDef(node); return; }
-    if (node->type == "PreIncrement" ||
-        node->type == "PostIncrement") { visitIncrement(node);   return; }
     if (node->type == "ForStmt")       { visitForStmt(node);     return; }
     if (node->type == "StmtList")      { 
         for (auto& child : node->children)
@@ -199,102 +261,63 @@ void SemanticAnalyzer::visitStatement(shared_ptr<ASTNode> node) {
 }
 
 void SemanticAnalyzer::visitOutput(shared_ptr<ASTNode> node) {
-    // cout << expr << expr ...
+    usesCinOrCout_ = true;  // Mark that cout is used
+    
+    // Process the output expressions
     for (auto& child : node->children) {
-        visitExpr(child);
+        if (child->type == "CoutList") {
+            for (auto& expr : child->children) {
+                visitExpr(expr);
+            }
+        } else {
+            visitExpr(child);
+        }
     }
+    
     node->dataType = "void";
 }
 
 void SemanticAnalyzer::visitInput(shared_ptr<ASTNode> node) {
-    // cin >> target >> target ...
+    usesCinOrCout_ = true;  // Mark that cin is used
+    
+    // Process the input targets (must be lvalues)
     for (auto& child : node->children) {
-        if (child->type == "ID") {
-            const auto* sym = symTable_.lookup(child->value);
-            if (!sym) {
-                addError("Undeclared variable '" + child->value + "'", *child);
-                child->dataType = "unknown";
-            } else if (sym->isArray) {
-                addError("Array '" + child->value + "' used without index", *child);
-                child->dataType = "unknown";
-            } else {
-                child->dataType = sym->type;
-            }
-        } else if (child->type == "ArrayAccess") {
-            visitArrayAccess(child);
-        } else {
-            addError("Invalid input target in cin statement", *child);
-        }
-    }
-    node->dataType = "void";
-}
-
-// ---------------------------------------------------------------------------
-// DeclStmt: Type DeclList ;
-//   children[0] = Type
-//   children[1] = DeclList (contains multiple Declarators)
-// ---------------------------------------------------------------------------
-
-void SemanticAnalyzer::visitDeclStmt(shared_ptr<ASTNode> node) {
-    if (node->children.size() < 2) return;
-
-    string typeName = node->children[0]->value.empty()
-                      ? node->children[0]->type
-                      : node->children[0]->value;
-    
-    auto declListNode = node->children[1];
-    
-    // Process each declarator in the list
-    for (auto& declaratorNode : declListNode->children) {
-        if (declaratorNode->type != "Declarator") continue;
-        
-        if (declaratorNode->children.empty()) continue;
-        
-        string varName = declaratorNode->children[0]->value;
-        
-        SemanticSymbol sym;
-        sym.name = varName;
-        sym.type = typeName;
-        sym.scope = currentScope_;
-        sym.isArray = false;
-        sym.size1 = 0;
-        sym.size2 = 0;
-        
-        // Check for array dimensions
-        if (declaratorNode->children.size() > 1) {
-            auto dimsNode = declaratorNode->children[1];
-            sym.isArray = true;
-            
-            if (dimsNode->type == "Number") {
-                // 1D array
-                sym.size1 = stoi(dimsNode->value);
-            } else if (dimsNode->type == "Dimensions") {
-                // 2D array
-                if (dimsNode->children.size() >= 2) {
-                    sym.size1 = stoi(dimsNode->children[0]->value);
-                    sym.size2 = stoi(dimsNode->children[1]->value);
+        if (child->type == "CinList") {
+            for (auto& target : child->children) {
+                if (target->type == "ID") {
+                    const SemanticSymbol* sym = symTable_.lookup(target->value);
+                    if (!sym) {
+                        addError("Undeclared variable '" + target->value + "'", *target);
+                    } else {
+                        target->dataType = sym->type;
+                    }
+                } else if (target->type == "ArrayAccess") {
+                    visitArrayAccess(target);
+                } else if (target->type == "InputTarget") {
+                    // Process InputTarget wrapper
+                    if (!target->children.empty()) {
+                        auto& actualTarget = target->children[0];
+                        if (actualTarget->type == "ID") {
+                            const SemanticSymbol* sym = symTable_.lookup(actualTarget->value);
+                            if (!sym) {
+                                addError("Undeclared variable '" + actualTarget->value + "'", *actualTarget);
+                            } else {
+                                actualTarget->dataType = sym->type;
+                            }
+                        } else if (actualTarget->type == "ArrayAccess") {
+                            visitArrayAccess(actualTarget);
+                        }
+                    }
                 }
-            } else if (dimsNode->type == "InferredSize") {
-                addError("Array '" + varName + "' size cannot be inferred without initializer", *declaratorNode);
             }
         }
-        
-        // Register in symbol table
-        if (!symTable_.declare(sym)) {
-            addError("Variable '" + varName + "' already declared in " + currentScope_, *declaratorNode);
-        }
-        
-        // Annotate nodes
-        declaratorNode->children[0]->dataType = typeName;
-        declaratorNode->dataType = typeName;
     }
     
-    node->children[0]->dataType = typeName;
     node->dataType = "void";
 }
 
 // ---------------------------------------------------------------------------
-// Declaration:  Type  ID  [ArrayDims]  ;  (OLD FORMAT - for backward compatibility)
+// Declaration:  Type  ID  [ArrayDims]  ;
 //   children[0] = Type
 //   children[1] = ID
 //   children[2] = Dimensions  (optional, for arrays)
@@ -306,9 +329,71 @@ void SemanticAnalyzer::visitDecl(shared_ptr<ASTNode> node) {
     string typeName = node->children[0]->value.empty()
                       ? node->children[0]->type
                       : node->children[0]->value;
-    string varName  = node->children[1]->value;
-
+    
     node->children[0]->dataType = typeName;
+
+    // Check if this is a multi-declaration (Type DeclList ;)
+    if (node->children.size() >= 2 && node->children[1]->type == "Declarator") {
+        // Multiple declarations: Type a, b, c;
+        // Process each declarator
+        for (size_t i = 1; i < node->children.size(); i++) {
+            auto& declarator = node->children[i];
+            if (declarator->type != "Declarator") continue;
+            
+            if (declarator->children.empty()) continue;
+            
+            string varName = declarator->children[0]->value;
+            declarator->children[0]->dataType = typeName;
+            
+            SemanticSymbol sym;
+            sym.name = varName;
+            sym.type = typeName;
+            sym.isArray = false;
+            sym.size1 = 0;
+            sym.size2 = 0;
+            sym.scope = currentScope_;
+            
+            // Check if declarator has array dimensions
+            if (declarator->children.size() >= 2 &&
+                (declarator->children[1]->type == "Dimensions" ||
+                 declarator->children[1]->type == "ArraySize" ||
+                 declarator->children[1]->type == "InferredSize" ||
+                 declarator->children[1]->type == "Number")) {
+                auto& dims = declarator->children[1];
+                sym.isArray = true;
+                
+                if (dims->type == "InferredSize") {
+                    addError("Array '" + varName + "' declared with empty brackets [] must have an initializer", *dims);
+                    sym.size1 = 0;
+                    sym.size2 = 0;
+                } else if (dims->type == "ArraySize" || dims->type == "Number") {
+                    sym.size1 = stoi(dims->value);
+                    sym.size2 = 0;
+                } else {
+                    sym.size1 = (dims->children.size() >= 1) ? stoi(dims->children[0]->value) : 0;
+                    sym.size2 = (dims->children.size() >= 2) ? stoi(dims->children[1]->value) : 0;
+                }
+                
+                dims->dataType = "int";
+                for (auto& d : dims->children) d->dataType = "int";
+            }
+            
+            if (!symTable_.declare(sym)) {
+                addError("Duplicate declaration of variable '" + varName + "'", *declarator->children[0]);
+                declarator->semanticInfo = "duplicate";
+            } else {
+                declarator->semanticInfo = "declared_here";
+            }
+            
+            declarator->dataType = typeName;
+        }
+        
+        node->dataType = typeName;
+        return;
+    }
+    
+    // Single declaration: Type ID ; or Type ID ArrayDims ;
+    string varName = node->children[1]->value;
     node->children[1]->dataType = typeName;
 
     SemanticSymbol sym;
@@ -324,7 +409,6 @@ void SemanticAnalyzer::visitDecl(shared_ptr<ASTNode> node) {
         (node->children[2]->type == "Dimensions" || 
          node->children[2]->type == "ArraySize" ||
          node->children[2]->type == "InferredSize" ||
-         node->children[2]->type == "DimVar" ||
          node->children[2]->type == "Number")) {
         auto& dims = node->children[2];
         sym.isArray = true;
@@ -335,22 +419,6 @@ void SemanticAnalyzer::visitDecl(shared_ptr<ASTNode> node) {
             sym.size1 = 0;
             sym.size2 = 0;
         }
-        // Variable-sized dimension: int x[n] — look up n in symbol table
-        else if (dims->type == "DimVar") {
-            const SemanticSymbol* dimSym = symTable_.lookup(dims->value);
-            if (!dimSym) {
-                addError("Undeclared variable '" + dims->value + "' used as array size", *dims);
-                sym.size1 = 0;
-            } else if (!isIntegerType(dimSym->type)) {
-                addError("Array size variable '" + dims->value + "' must be of type 'int', got '" + dimSym->type + "'", *dims);
-                sym.size1 = 0;
-            } else {
-                // Size is dynamic — store 0 to indicate variable-length array
-                sym.size1 = 0;
-                dims->dataType = "int";
-            }
-            sym.size2 = 0;
-        }
         // Handle different dimension node types
         else if (dims->type == "ArraySize" || dims->type == "Number") {
             // Single dimension stored in value
@@ -358,25 +426,8 @@ void SemanticAnalyzer::visitDecl(shared_ptr<ASTNode> node) {
             sym.size2 = 0;
         } else {
             // Multiple dimensions stored in children (Dimensions node)
-            // Each child is Number or DimVar
-            auto getDimSize = [&](shared_ptr<ASTNode> d) -> int {
-                if (d->type == "DimVar") {
-                    const SemanticSymbol* ds = symTable_.lookup(d->value);
-                    if (!ds) {
-                        addError("Undeclared variable '" + d->value + "' used as array size", *d);
-                        return 0;
-                    }
-                    if (!isIntegerType(ds->type)) {
-                        addError("Array size variable '" + d->value + "' must be of type 'int'", *d);
-                        return 0;
-                    }
-                    d->dataType = "int";
-                    return 0; // dynamic
-                }
-                try { return stoi(d->value); } catch (...) { return 0; }
-            };
-            sym.size1 = (dims->children.size() >= 1) ? getDimSize(dims->children[0]) : 0;
-            sym.size2 = (dims->children.size() >= 2) ? getDimSize(dims->children[1]) : 0;
+            sym.size1   = (dims->children.size() >= 1) ? stoi(dims->children[0]->value) : 0;
+            sym.size2   = (dims->children.size() >= 2) ? stoi(dims->children[1]->value) : 0;
         }
         
         dims->dataType = "int"; // dimensions are always integer
@@ -429,57 +480,49 @@ void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
                          (node->children[2]->type == "Dimensions" || 
                           node->children[2]->type == "ArraySize" ||
                           node->children[2]->type == "InferredSize" ||
-                          node->children[2]->type == "DimVar" ||
                           (node->children[2]->type == "Number" && node->children.size() == 4)));  // Number only if 4 children
 
     if (hasArrayDims) {
         auto& dims = node->children[2];
         sym.isArray = true;
         
-        // Helper to resolve a dimension node to its integer size (-1 = dynamic/unknown)
-        auto resolveDim = [&](shared_ptr<ASTNode> d) -> int {
-            if (d->type == "DimVar") {
-                const SemanticSymbol* ds = symTable_.lookup(d->value);
-                if (!ds) {
-                    addError("Undeclared variable '" + d->value + "' used as array size", *d);
-                    return -1;
-                }
-                if (!isIntegerType(ds->type)) {
-                    addError("Array size variable '" + d->value + "' must be of type 'int'", *d);
-                    return -1;
-                }
-                d->dataType = "int";
-                return -1; // dynamic — can't check at compile time
-            }
-            try { return stoi(d->value); } catch (...) { return -1; }
-        };
-
         // Handle different dimension node types
         if (dims->type == "InferredSize") {
+            // Empty brackets [] - infer size from initializer
+            // We'll count the initializer elements and set the size
             if (node->children.size() >= 4) {
                 auto& arrNode = node->children[3];
                 int initializerCount = countArrayElements(arrNode);
                 sym.size1 = initializerCount;
                 sym.size2 = 0;
+                
+                // Update the dims node with the inferred size for documentation
                 dims->value = to_string(initializerCount);
             } else {
                 addError("Array with inferred size must have an initializer", *node->children[1]);
                 sym.size1 = 0;
                 sym.size2 = 0;
             }
-        } else if (dims->type == "DimVar") {
-            sym.size1 = resolveDim(dims);
-            sym.size2 = 0;
         } else if (dims->type == "ArraySize") {
-            try { sym.size1 = stoi(dims->value); } catch (...) { sym.size1 = 0; }
+            // Single dimension stored in value
+            try {
+                sym.size1 = stoi(dims->value);
+            } catch (...) {
+                sym.size1 = 0;
+            }
             sym.size2 = 0;
         } else if (dims->type == "Number") {
-            try { sym.size1 = stoi(dims->value); } catch (...) { sym.size1 = 0; }
+            // Handle parser issue where Number appears instead of ArraySize for 1D arrays
+            try {
+                sym.size1 = stoi(dims->value);
+            } catch (...) {
+                sym.size1 = 0;
+            }
             sym.size2 = 0;
         } else {
-            // Dimensions node (multi-dim)
-            sym.size1 = (dims->children.size() >= 1) ? resolveDim(dims->children[0]) : 0;
-            sym.size2 = (dims->children.size() >= 2) ? resolveDim(dims->children[1]) : 0;
+            // Multiple dimensions stored in children (Dimensions node)
+            sym.size1   = (dims->children.size() >= 1) ? stoi(dims->children[0]->value) : 0;
+            sym.size2   = (dims->children.size() >= 2) ? stoi(dims->children[1]->value) : 0;
         }
         
         dims->dataType = "int";
@@ -508,19 +551,19 @@ void SemanticAnalyzer::visitDeclAssign(shared_ptr<ASTNode> node) {
             // Count the number of initializer elements
             int initializerCount = countArrayElements(arrNode);
             
-            // Only validate size if it was explicitly declared (not inferred or dynamic)
-            if (node->children[2]->type != "InferredSize" && sym.size1 > 0) {
-                int expectedSize = sym.size1;
+            // Only validate size if it was explicitly declared (not inferred)
+            if (node->children[2]->type != "InferredSize") {
+                int expectedSize = sym.size1; // For 1D arrays, use size1
                 
                 // For 2D arrays, we expect size1 * size2 elements in flattened form
                 if (sym.size2 > 0) {
                     expectedSize = sym.size1 * sym.size2;
                 }
                 
-                // Enforce exact initializer count — must match declared size exactly
-                if (initializerCount != expectedSize) {
+                // Validate array size - allow fewer initializers (rest are zero-initialized, like C++)
+                if (initializerCount > expectedSize) {
                     addError("Array size mismatch: declared size " + to_string(expectedSize) +
-                             " but provided " + to_string(initializerCount) + " initializer(s)", *arrNode);
+                             " but provided " + to_string(initializerCount) + " initializers", *arrNode);
                 }
             }
             
@@ -631,6 +674,166 @@ void SemanticAnalyzer::visitAssign(shared_ptr<ASTNode> node) {
 }
 
 // ---------------------------------------------------------------------------
+// For loop statement:  for (init; cond; update) { body }
+//   ForStmt structure:
+//   children[0] = "for"
+//   children[1] = "("
+//   children[2] = ForInit (Type ID = Expr OR ID = Expr)
+//   children[3] = ";"
+//   children[4] = ForCond (Expr)
+//   children[5] = ";"
+//   children[6] = ForUpdate (ID = Expr)
+//   children[7] = ")"
+//   children[8] = "{"
+//   children[9] = StmtList (loop body)
+//   children[10] = "}"
+// ---------------------------------------------------------------------------
+
+void SemanticAnalyzer::visitForStmt(shared_ptr<ASTNode> node) {
+    node->dataType = "void";
+    node->semanticInfo = "for_loop_no_codegen";  // Mark for code generator to skip
+    
+    // Enter a new scope for the for loop
+    string previousScope = currentScope_;
+    currentScope_ = "for_loop";
+    
+    // Set flag to indicate we're inside a for loop
+    bool wasInsideForLoop = insideForLoop_;
+    insideForLoop_ = true;
+    
+    // Process ForInit (initialization)
+    if (node->children.size() > 2 && node->children[2]->type == "ForInit") {
+        auto& initNode = node->children[2];
+        
+        if (!initNode->children.empty()) {
+            // Check if it's a declaration (Type ID = Expr) or assignment (ID = Expr)
+            if (initNode->children.size() >= 4 && 
+                (initNode->children[0]->type == "int" || 
+                 initNode->children[0]->type == "float" ||
+                 initNode->children[0]->type == "double" ||
+                 initNode->children[0]->type == "char" ||
+                 initNode->children[0]->type == "string" ||
+                 initNode->children[0]->type == "bool")) {
+                // Declaration: Type ID = Expr
+                string typeName = initNode->children[0]->value.empty() 
+                                  ? initNode->children[0]->type 
+                                  : initNode->children[0]->value;
+                string varName = initNode->children[1]->value;
+                
+                initNode->children[0]->dataType = typeName;
+                initNode->children[1]->dataType = typeName;
+                
+                // Declare the loop variable
+                SemanticSymbol sym;
+                sym.name = varName;
+                sym.type = typeName;
+                sym.isArray = false;
+                sym.size1 = 0;
+                sym.size2 = 0;
+                sym.scope = currentScope_;
+                
+                if (!symTable_.declare(sym)) {
+                    addError("Duplicate declaration of loop variable '" + varName + "'", *initNode->children[1]);
+                } else {
+                    initNode->semanticInfo = "loop_var_declared";
+                }
+                
+                // Validate the initialization expression
+                if (initNode->children.size() >= 4) {
+                    string exprType = visitExpr(initNode->children[3]);
+                    if (!isAssignmentCompatible(typeName, exprType)) {
+                        addError("Type mismatch in loop initialization: cannot assign '" + exprType +
+                                 "' to '" + typeName + "'", *initNode->children[3]);
+                    }
+                }
+                
+                initNode->dataType = typeName;
+            } else if (initNode->children.size() >= 3) {
+                // Assignment: ID = Expr
+                string varName = initNode->children[0]->value;
+                const SemanticSymbol* sym = symTable_.lookup(varName);
+                
+                if (!sym) {
+                    addError("Undeclared variable '" + varName + "' in loop initialization", *initNode->children[0]);
+                    initNode->children[0]->dataType = "unknown";
+                } else {
+                    initNode->children[0]->dataType = sym->type;
+                    
+                    // Validate the assignment expression
+                    string exprType = visitExpr(initNode->children[2]);
+                    if (!isAssignmentCompatible(sym->type, exprType)) {
+                        addError("Type mismatch in loop initialization: cannot assign '" + exprType +
+                                 "' to '" + sym->type + "'", *initNode->children[2]);
+                    }
+                }
+                
+                initNode->dataType = initNode->children[0]->dataType;
+            }
+        }
+    }
+    
+    // Process ForCond (condition)
+    if (node->children.size() > 4 && node->children[4]->type == "ForCond") {
+        auto& condNode = node->children[4];
+        
+        if (!condNode->children.empty()) {
+            string condType = visitExpr(condNode->children[0]);
+            condNode->dataType = condType;
+            
+            // Condition should evaluate to a boolean-like value
+            // For now, we accept any numeric type as condition
+            if (condType != "int" && condType != "float" && condType != "double" && 
+                condType != "bool" && condType != "unknown") {
+                addError("Loop condition must be a numeric or boolean expression, got '" + 
+                         condType + "'", *condNode->children[0]);
+            }
+        }
+    }
+    
+    // Process ForUpdate (update expression)
+    if (node->children.size() > 6 && node->children[6]->type == "ForUpdate") {
+        auto& updateNode = node->children[6];
+        
+        if (!updateNode->children.empty() && updateNode->children.size() >= 3) {
+            // ID = Expr
+            string varName = updateNode->children[0]->value;
+            const SemanticSymbol* sym = symTable_.lookup(varName);
+            
+            if (!sym) {
+                addError("Undeclared variable '" + varName + "' in loop update", *updateNode->children[0]);
+                updateNode->children[0]->dataType = "unknown";
+            } else {
+                updateNode->children[0]->dataType = sym->type;
+                
+                // Validate the update expression
+                string exprType = visitExpr(updateNode->children[2]);
+                if (!isAssignmentCompatible(sym->type, exprType)) {
+                    addError("Type mismatch in loop update: cannot assign '" + exprType +
+                             "' to '" + sym->type + "'", *updateNode->children[2]);
+                }
+            }
+            
+            updateNode->dataType = updateNode->children[0]->dataType;
+        }
+    }
+    
+    // Process loop body (StmtList)
+    if (node->children.size() > 9 && node->children[9]->type == "StmtList") {
+        auto& bodyNode = node->children[9];
+        bodyNode->semanticInfo = "for_loop_body_no_codegen";  // Mark body for skipping
+        
+        for (auto& stmt : bodyNode->children) {
+            stmt->semanticInfo = "inside_for_loop_no_codegen";  // Mark each statement
+            visitStatement(stmt);
+        }
+    }
+    
+    // Restore previous scope and flag
+    currentScope_ = previousScope;
+    insideForLoop_ = wasInsideForLoop;
+}
+
+// ---------------------------------------------------------------------------
 // Return statement:  return  [Expr]  ;
 //   children[0] = Expr (optional)
 // ---------------------------------------------------------------------------
@@ -647,208 +850,6 @@ void SemanticAnalyzer::visitReturn(shared_ptr<ASTNode> node) {
 }
 
 // ---------------------------------------------------------------------------
-// For loop:  for ( ForInit ; ForCond ; ForUpdate ) Body
-//   children[0] = ForInit
-//   children[1] = ForCond
-//   children[2] = ForUpdate
-//   children[3] = Body (StmtList or single Stmt)
-//
-//   ForInit children:
-//     Type ID Expr  (3 children) — declaration with initializer
-//     Type ID       (2 children) — declaration only
-//     ID   Expr     (2 children) — plain assignment (no Type child)
-// ---------------------------------------------------------------------------
-
-void SemanticAnalyzer::visitForStmt(shared_ptr<ASTNode> node) {
-    node->dataType = "void";
-    node->semanticInfo = "for_loop";
-
-    if (node->children.size() < 4) {
-        // Malformed — just recurse safely
-        for (auto& child : node->children) visitStatement(child);
-        return;
-    }
-
-    auto& initNode   = node->children[0]; // ForInit
-    auto& condNode   = node->children[1]; // ForCond
-    auto& updateNode = node->children[2]; // ForUpdate / IncrExpr
-    auto& bodyNode   = node->children[3]; // StmtList or Stmt
-
-    // ── 1. Process ForInit ────────────────────────────────────────────────
-    // Determine if the first child of ForInit is a type keyword (declaration)
-    // or an ID (plain assignment).
-    string loopVarName;
-    bool   declaredLoopVar = false;
-
-    if (initNode && !initNode->children.empty()) {
-        auto& first = initNode->children[0];
-        bool firstIsType = (first->type == "DATATYPE" ||
-                            first->value == "int"    || first->value == "float" ||
-                            first->value == "double" || first->value == "char"  ||
-                            first->value == "string");
-
-        if (firstIsType) {
-            // ForInit declares a new variable — register it in the symbol table
-            string typeName = first->value.empty() ? first->type : first->value;
-            string varName  = (initNode->children.size() >= 2)
-                              ? initNode->children[1]->value : "";
-
-            if (!varName.empty()) {
-                loopVarName    = varName;
-                declaredLoopVar = true;
-
-                SemanticSymbol sym;
-                sym.name    = varName;
-                sym.type    = typeName;
-                sym.isArray = false;
-                sym.size1   = 0;
-                sym.size2   = 0;
-                sym.scope   = currentScope_;
-
-                // Declare (ignore duplicate — loop var may shadow outer)
-                symTable_.declare(sym);
-
-                first->dataType = typeName;
-                initNode->children[1]->dataType = typeName;
-
-                // Validate initializer expression if present (3 children = Type ID Expr)
-                if (initNode->children.size() >= 3) {
-                    string rhsType = visitExpr(initNode->children[2]);
-                    if (!isAssignmentCompatible(typeName, rhsType)) {
-                        addError("Type mismatch in for-loop init: cannot assign '" +
-                                 rhsType + "' to '" + typeName + "'",
-                                 *initNode->children[2]);
-                    }
-                }
-            }
-        } else {
-            // Plain assignment: ID = Expr
-            if (initNode->children.size() >= 2) {
-                string varName = initNode->children[0]->value;
-                const SemanticSymbol* sym = symTable_.lookup(varName);
-                if (!sym) {
-                    addError("Undeclared variable '" + varName + "' in for-loop init",
-                             *initNode->children[0]);
-                } else {
-                    string rhsType = visitExpr(initNode->children[1]);
-                    if (!isAssignmentCompatible(sym->type, rhsType)) {
-                        addError("Type mismatch in for-loop init: cannot assign '" +
-                                 rhsType + "' to '" + sym->type + "'",
-                                 *initNode->children[1]);
-                    }
-                }
-            }
-        }
-    }
-    initNode->dataType = "void";
-
-    // ── 2. Validate ForCond ───────────────────────────────────────────────
-    // ForCond: Expr RelOp Expr  OR  plain Expr
-    if (condNode) {
-        condNode->dataType = "bool";
-        for (auto& child : condNode->children) {
-            // RelOp tokens (>, <, >=, etc.) are leaves — skip type-checking them
-            const string& ct = child->type;
-            bool isRelOp = (ct == ">" || ct == "<" || ct == ">=" ||
-                            ct == "<=" || ct == "==" || ct == "!=");
-            if (!isRelOp) visitExpr(child);
-        }
-    }
-
-    // ── 3. Validate ForUpdate ─────────────────────────────────────────────
-    // ForUpdate is either PreIncrement / PostIncrement or an Assignment node
-    if (updateNode) {
-        if (updateNode->type == "PreIncrement" ||
-            updateNode->type == "PostIncrement") {
-            visitIncrement(updateNode);
-        } else if (updateNode->type == "ForUpdate") {
-            // ID = Expr
-            if (updateNode->children.size() >= 2) {
-                string varName = updateNode->children[0]->value;
-                const SemanticSymbol* sym = symTable_.lookup(varName);
-                if (!sym) {
-                    addError("Undeclared variable '" + varName + "' in for-loop update",
-                             *updateNode->children[0]);
-                } else {
-                    string rhsType = visitExpr(updateNode->children[1]);
-                    if (!isAssignmentCompatible(sym->type, rhsType)) {
-                        addError("Type mismatch in for-loop update", *updateNode->children[1]);
-                    }
-                }
-            }
-        } else {
-            // Fallback — try visiting as a statement
-            visitStatement(updateNode);
-        }
-    }
-
-    // ── 4. Visit body ─────────────────────────────────────────────────────
-    visitStatement(bodyNode);
-
-    // ── 5. Remove loop-scoped variable from symbol table ──────────────────
-    // The SemanticSymbolTable uses a flat map, so we remove the loop var
-    // to avoid it leaking into the outer scope after the loop.
-    // (Only remove if WE declared it — don't remove a pre-existing outer var.)
-    if (declaredLoopVar && !loopVarName.empty()) {
-        // We can't remove from the table directly (no remove() API), but we
-        // mark it so downstream phases know it's loop-scoped.
-        // The symbol stays in the table which is fine for single-function programs.
-        node->semanticInfo = "for_loop_var=" + loopVarName;
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Increment statement / expression:  ++ID  or  ID++
-//   PreIncrement:  ++i  — increments before the value is used
-//   PostIncrement: i++  — increments after the value is used
-//   children[0] = ID node
-// ---------------------------------------------------------------------------
-
-void SemanticAnalyzer::visitIncrement(shared_ptr<ASTNode> node) {
-    if (node->children.empty()) {
-        addError("Malformed increment expression", *node);
-        node->dataType = "unknown";
-        return;
-    }
-
-    auto& idNode = node->children[0];
-    string varName = idNode->value;
-
-    const SemanticSymbol* sym = symTable_.lookup(varName);
-    if (!sym) {
-        addError("Undeclared variable '" + varName + "' in increment expression", *idNode);
-        idNode->dataType = "unknown";
-        node->dataType = "unknown";
-        return;
-    }
-
-    if (sym->isArray) {
-        addError("Cannot apply ++ to array '" + varName + "' without an index", *idNode);
-        idNode->dataType = "unknown";
-        node->dataType = "unknown";
-        return;
-    }
-
-    if (!isNumericType(sym->type)) {
-        addError("Increment operator ++ requires a numeric type, but '" +
-                 varName + "' is of type '" + sym->type + "'", *idNode);
-        idNode->dataType = sym->type;
-        node->dataType = "unknown";
-        return;
-    }
-
-    idNode->dataType = sym->type;
-    node->dataType   = sym->type;
-
-    // Annotate with pre/post semantics for downstream phases
-    if (node->type == "PreIncrement") {
-        node->semanticInfo = "pre_increment";   // value used AFTER increment
-    } else {
-        node->semanticInfo = "post_increment";  // value used BEFORE increment
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Expression visitor — returns the resolved type
 // ---------------------------------------------------------------------------
 
@@ -859,8 +860,13 @@ string SemanticAnalyzer::visitExpr(shared_ptr<ASTNode> node) {
 
     // Leaf: numeric literal
     if (t == "NUM" || t == "Number") {
-        // Determine type based on the value
+        // Check if it's actually a boolean literal
         string value = node->value;
+        if (value == "true" || value == "false") {
+            node->dataType = "bool";
+            return "bool";
+        }
+        // Determine type based on the value
         if (value.find('.') != string::npos) {
             // Contains decimal point - it's a float
             node->dataType = "float";
@@ -870,6 +876,12 @@ string SemanticAnalyzer::visitExpr(shared_ptr<ASTNode> node) {
             node->dataType = "int";
             return "int";
         }
+    }
+
+    // Leaf: boolean literal
+    if (t == "true" || t == "false") {
+        node->dataType = "bool";
+        return "bool";
     }
 
     // Leaf: string literal
@@ -911,12 +923,6 @@ string SemanticAnalyzer::visitExpr(shared_ptr<ASTNode> node) {
     if (t == "ArrayAccess") {
         string type = visitArrayAccess(node);
         return type;
-    }
-
-    // Pre/Post increment used as an expression (e.g. x = ++i or x = i++)
-    if (t == "PreIncrement" || t == "PostIncrement") {
-        visitIncrement(node);
-        return node->dataType;
     }
 
     // BinaryOp node (from parser JSON with operator field)
@@ -984,6 +990,60 @@ string SemanticAnalyzer::visitExpr(shared_ptr<ASTNode> node) {
         }
         node->dataType = resolved;
         return resolved;
+    }
+    
+    // Comparison operators: <, >, <=, >=, ==, !=
+    if (t == "<" || t == ">" || t == "<=" || t == ">=" || t == "==" || t == "!=") {
+        if (node->children.size() < 2) {
+            node->dataType = "bool";
+            return "bool";
+        }
+        string t1 = visitExpr(node->children[0]);
+        string t2 = visitExpr(node->children[1]);
+        
+        // Comparisons should be between compatible types
+        if (t1 != t2 && t1 != "unknown" && t2 != "unknown") {
+            // Allow numeric type comparisons
+            if (isNumericType(t1) && isNumericType(t2)) {
+                node->dataType = "bool";
+                return "bool";
+            }
+            addError("Type mismatch in comparison: '" + t1 + "' " + t + " '" + t2 + "'", *node);
+        }
+        
+        node->dataType = "bool";
+        return "bool";
+    }
+    
+    // Handle Comparison node
+    if (t == "Comparison") {
+        if (node->children.size() >= 3) {
+            string t1 = visitExpr(node->children[0]);
+            string op = node->children[1]->value;
+            string t2 = visitExpr(node->children[2]);
+            
+            // Comparisons should be between compatible types
+            if (t1 != t2 && t1 != "unknown" && t2 != "unknown") {
+                // Allow numeric type comparisons
+                if (isNumericType(t1) && isNumericType(t2)) {
+                    node->dataType = "bool";
+                    return "bool";
+                }
+                addError("Type mismatch in comparison: '" + t1 + "' " + op + " '" + t2 + "'", *node);
+            }
+            
+            node->dataType = "bool";
+            return "bool";
+        }
+    }
+    
+    // Handle CompTerm node
+    if (t == "CompTerm") {
+        if (!node->children.empty()) {
+            string type = visitExpr(node->children[0]);
+            node->dataType = type;
+            return type;
+        }
     }
 
     // Parenthesised expression — single child

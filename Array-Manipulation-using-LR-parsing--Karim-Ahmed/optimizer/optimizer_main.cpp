@@ -38,6 +38,18 @@ void printIR(const OptIR& ir, const string& title) {
             cout << quad.result << " = " << quad.arg1 << "[" << quad.arg2 << "]\n";
         } else if (quad.op == "STORE") {
             cout << quad.arg1 << "[" << quad.arg2 << "] = " << quad.result << "\n";
+        } else if (quad.op == "LABEL") {
+            cout << quad.result << ":\n";
+        } else if (quad.op == "GOTO") {
+            cout << "GOTO " << quad.result << "\n";
+        } else if (quad.op == "IF_FALSE") {
+            cout << "IF_FALSE " << quad.arg1 << " GOTO " << quad.result << "\n";
+        } else if (quad.op == "PRINT") {
+            cout << "PRINT " << quad.arg1 << "\n";
+        } else if (quad.op == "PRINTLN") {
+            cout << "PRINTLN\n";
+        } else if (quad.op == "READ") {
+            cout << "READ " << quad.result << "\n";
         } else if (quad.arg2.empty()) {
             cout << quad.result << " = " << quad.op << " " << quad.arg1 << "\n";
         } else {

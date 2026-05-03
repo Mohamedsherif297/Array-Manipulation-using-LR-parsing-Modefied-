@@ -50,6 +50,8 @@ private:
     void genAssign     (shared_ptr<ASTNode> node);
     void genOutput     (shared_ptr<ASTNode> node);
     void genInput      (shared_ptr<ASTNode> node);
+    void genForStmt    (shared_ptr<ASTNode> node);
+    void genIncrement  (shared_ptr<ASTNode> node);
 
     // -----------------------------------------------------------------------
     // Expression visitors — return the name of the temporary (or literal /
@@ -58,6 +60,7 @@ private:
     string genExpr        (shared_ptr<ASTNode> node);
     string genBinaryOp    (shared_ptr<ASTNode> node);
     string genArrayAccess (shared_ptr<ASTNode> node);
+    string genCondition   (shared_ptr<ASTNode> node); // ForCond → temp holding 0/1
 
     // -----------------------------------------------------------------------
     // Array initialisation helpers
@@ -78,14 +81,18 @@ private:
     // Generate a fresh temporary name: t1, t2, …
     string newTemp();
 
+    // Generate a fresh label name: L1, L2, …
+    string newLabel();
+
     // -----------------------------------------------------------------------
     // Data members
     // -----------------------------------------------------------------------
     const CGSymbolTable& symTable_;
     IR                   ir_;
-    int                  tempCounter_ = 0;
-    bool                 hasError_    = false;
-    int                  currentLine_ = 0;   // source line being processed
+    int                  tempCounter_  = 0;
+    int                  labelCounter_ = 0;
+    bool                 hasError_     = false;
+    int                  currentLine_  = 0;
 
     void error(const string& msg);
 };

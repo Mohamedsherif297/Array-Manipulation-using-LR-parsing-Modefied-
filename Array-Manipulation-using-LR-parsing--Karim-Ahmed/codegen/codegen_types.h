@@ -34,3 +34,20 @@ struct Quad {
 
 // The complete IR for a compilation unit
 using IR = vector<Quad>;
+
+// ---------------------------------------------------------------------------
+// Supported op codes (for reference):
+//
+//   ASSIGN      result = arg1
+//   LOAD        result = arg1[arg2]          (array read)
+//   STORE       arg1[arg2] = result          (array write)
+//   DECL        // DECL result  type=arg1    (declaration comment)
+//   PRINT       PRINT arg1
+//   PRINTLN     PRINTLN                      (newline)
+//   READ        READ result
+//   +  -  *  /  result = arg1 op arg2        (arithmetic)
+//   LABEL       LABEL result                 (jump target)
+//   GOTO        GOTO result                  (unconditional jump)
+//   IF_FALSE    IF_FALSE arg1 GOTO result    (conditional jump)
+//   INCR        result = result + 1          (pre/post increment)
+// ---------------------------------------------------------------------------
