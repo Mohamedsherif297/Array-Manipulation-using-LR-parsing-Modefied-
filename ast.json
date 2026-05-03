@@ -1,0 +1,78 @@
+{
+  "type": "Program",
+  "line": 1,
+  "children": [
+    {
+      "type": "FunctionDef",
+      "line": 1,
+      "children": [
+        {
+          "type": "DATATYPE",
+          "value": "int"
+        },
+        {
+          "type": "ID",
+          "value": "main",
+          "line": 1
+        },
+        {
+          "type": "StmtList",
+          "line": 1,
+          "children": [
+            {
+              "type": "DeclAssign",
+              "line": 1,
+              "children": [
+                {
+                  "type": "DATATYPE",
+                  "value": "int"
+                },
+                {
+                  "type": "ID",
+                  "value": "x",
+                  "line": 1
+                },
+                {
+                  "type": "Number",
+                  "value": 5,
+                  "line": 1
+                }
+              ]
+            },
+            {
+              "type": "DeclAssign",
+              "line": 1,
+              "children": [
+                {
+                  "type": "DATATYPE",
+                  "value": "int"
+                },
+                {
+                  "type": "ID",
+                  "value": "y",
+                  "line": 1
+                },
+                {
+                  "type": "Number",
+                  "value": 3,
+                  "line": 1
+                }
+              ]
+            },
+            {
+              "type": "Return",
+              "line": 1,
+              "children": [
+                {
+                  "type": "Number",
+                  "value": 0,
+                  "line": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

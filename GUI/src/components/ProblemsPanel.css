@@ -1,0 +1,357 @@
+.problems-panel {
+  position: relative;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  min-height: 40px;
+  max-height: 400px;
+  transition: height 0.3s ease;
+}
+
+.problems-panel.collapsed {
+  min-height: 40px;
+  max-height: 40px;
+}
+
+.problems-panel.collapsed .problems-content {
+  display: none;
+}
+
+.problems-panel.collapsed .problems-tab {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.problems-panel.collapsed .problems-tab:hover {
+  background: transparent;
+}
+
+/* ============================================
+   RESIZE HANDLE
+   ============================================ */
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: ns-resize;
+  background: transparent;
+  z-index: 10;
+  transition: background 0.2s;
+}
+
+.resize-handle:hover {
+  background: var(--accent-primary);
+}
+
+.resize-handle:active {
+  background: var(--accent-primary);
+}
+
+/* ============================================
+   PROBLEMS HEADER
+   ============================================ */
+
+.problems-header {
+  height: 40px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-default);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+}
+
+.problems-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.problems-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.problems-tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.problems-tab.active {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.tab-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.tab-label {
+  line-height: 1;
+}
+
+.tab-count {
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+}
+
+.tab-count.error {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--accent-error);
+}
+
+.tab-count.warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--accent-warning);
+}
+
+.problems-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.collapse-btn {
+  font-weight: bold;
+}
+
+.collapse-btn:hover {
+  background: var(--accent-primary);
+  color: white;
+}
+
+/* ============================================
+   PROBLEMS CONTENT
+   ============================================ */
+
+.problems-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.problems-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-problems {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px;
+  color: var(--text-secondary);
+}
+
+.empty-icon {
+  font-size: 24px;
+}
+
+.empty-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ============================================
+   PROBLEM ITEM
+   ============================================ */
+
+.problem-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-default);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.problem-item:hover {
+  background: var(--bg-hover);
+}
+
+.problem-icon {
+  font-size: 16px;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.problem-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.problem-message {
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.problem-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.problem-phase {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.meta-separator {
+  color: var(--text-tertiary);
+}
+
+.problem-location {
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.problem-action {
+  color: var(--accent-primary);
+  font-size: 16px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.problem-item:hover .problem-action {
+  opacity: 1;
+}
+
+/* ============================================
+   CONSOLE OUTPUT
+   ============================================ */
+
+.console-output {
+  padding: 12px 16px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.console-line {
+  color: var(--text-secondary);
+  padding: 4px 0;
+}
+
+.console-input-area {
+  width: 100%;
+  min-height: 90px;
+  margin-top: 10px;
+  padding: 10px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+}
+
+.console-input-area:focus {
+  border-color: var(--border-focus);
+}
+
+/* Highlight input box when cin values are needed */
+.console-input-area.cin-needed {
+  border-color: var(--accent-warning);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+.console-hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.console-output-label {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 8px 0 4px 0;
+}
+
+.console-dim {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.console-hint strong {
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+  .problems-panel {
+    min-height: 120px;
+  }
+  
+  .problems-header {
+    padding: 0 8px;
+  }
+  
+  .problems-tab {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  
+  .tab-label {
+    display: none;
+  }
+  
+  .problem-item {
+    padding: 10px 12px;
+  }
+  
+  .problem-message {
+    font-size: 13px;
+  }
+}

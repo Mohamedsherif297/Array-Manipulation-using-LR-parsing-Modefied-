@@ -1,0 +1,132 @@
+{
+  "type": "Program",
+  "line": 1,
+  "dataType": "void",
+  "children": [
+    {
+      "type": "FunctionDef",
+      "line": 1,
+      "dataType": "int",
+      "children": [
+        {
+          "type": "DATATYPE",
+          "value": "int",
+          "dataType": "int"
+        },
+        {
+          "type": "ID",
+          "value": "main",
+          "line": 1,
+          "dataType": "int"
+        },
+        {
+          "type": "StmtList",
+          "line": 2,
+          "children": [
+            {
+              "type": "DeclAssign",
+              "line": 2,
+              "dataType": "int",
+              "semanticInfo": "declared_here",
+              "children": [
+                {
+                  "type": "DATATYPE",
+                  "value": "int",
+                  "dataType": "int"
+                },
+                {
+                  "type": "ID",
+                  "value": "x",
+                  "line": 2,
+                  "dataType": "int"
+                },
+                {
+                  "type": "Number",
+                  "value": "5",
+                  "line": 2,
+                  "dataType": "int"
+                }
+              ]
+            },
+            {
+              "type": "DeclAssign",
+              "line": 3,
+              "dataType": "float",
+              "semanticInfo": "declared_here",
+              "children": [
+                {
+                  "type": "DATATYPE",
+                  "value": "float",
+                  "dataType": "float"
+                },
+                {
+                  "type": "ID",
+                  "value": "y",
+                  "line": 3,
+                  "dataType": "float"
+                },
+                {
+                  "type": "Number",
+                  "value": "7.5",
+                  "line": 3,
+                  "dataType": "float"
+                }
+              ]
+            },
+            {
+              "type": "DeclAssign",
+              "line": 4,
+              "dataType": "float",
+              "semanticInfo": "declared_here",
+              "children": [
+                {
+                  "type": "DATATYPE",
+                  "value": "float",
+                  "dataType": "float"
+                },
+                {
+                  "type": "ID",
+                  "value": "z",
+                  "line": 4,
+                  "dataType": "float"
+                },
+                {
+                  "type": "+",
+                  "line": 4,
+                  "dataType": "float",
+                  "children": [
+                    {
+                      "type": "ID",
+                      "value": "x",
+                      "line": 4,
+                      "dataType": "int"
+                    },
+                    {
+                      "type": "ID",
+                      "value": "y",
+                      "line": 4,
+                      "dataType": "float"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Return",
+              "line": 5,
+              "dataType": "int",
+              "children": [
+                {
+                  "type": "Number",
+                  "value": "0",
+                  "line": 5,
+                  "dataType": "int"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

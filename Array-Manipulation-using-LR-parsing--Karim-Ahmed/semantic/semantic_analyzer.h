@@ -1,0 +1,80 @@
+#pragma once
+
+#include <memory>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include "ASTNode.h"
+#include "symbol_table.h"
+
+using namespace std;
+
+struct SemanticError {
+    string message;
+    string nodeType;   // which AST node triggered it
+    string nodeValue;  // value of that node (if any)
+    int line;          // line number where error occurred
+};
+
+class SemanticAnalyzer {
+public:
+    explicit SemanticAnalyzer(SemanticSymbolTable& symTable);
+
+    // Entry point: walk the whole tree, annotate nodes, collect errors.
+    // Returns true if no errors were found.
+    bool analyze(shared_ptr<ASTNode> root);
+
+    const vector<SemanticError>& errors() const { return errors_; }
+    bool hasErrors() const { return !errors_.empty(); }
+
+    // Implicit type conversion log — populated during analysis
+    const vector<TypeConversion>& conversions() const { return conversions_; }
+
+    // Print all recorded conversions to stdout in a human-readable format
+    void printConversions() const;
+
+    // Export all recorded conversions to a JSON file
+    void writeConversions(const string& filePath) const;
+
+private:
+    SemanticSymbolTable& symTable_;
+    vector<SemanticError> errors_;
+    vector<TypeConversion> conversions_;   // implicit promotion log
+    string currentScope_ = "global";   // tracks current scope during traversal
+    
+    bool insideForLoop_ = false;  // Track if we're inside a for loop
+    bool hasIostreamInclude_ = false;  // Track if #include <iostream> is present
+    bool hasUsingNamespaceStd_ = false;  // Track if using namespace std; is present
+    bool usesCinOrCout_ = false;  // Track if cin or cout is used
+
+    void addError(const string& msg, const ASTNode& node);
+    
+    // Scan for includes and using statements
+    void scanForPreamble(shared_ptr<ASTNode> node);
+
+    // Node visitors
+    void visitFunctionDef(shared_ptr<ASTNode> node);
+    void visitProgram(shared_ptr<ASTNode> node);
+    void visitStatement(shared_ptr<ASTNode> node);
+    void visitDecl(shared_ptr<ASTNode> node);
+    void visitDeclAssign(shared_ptr<ASTNode> node);
+    void visitAssign(shared_ptr<ASTNode> node);
+    void visitOutput(shared_ptr<ASTNode> node);
+    void visitInput(shared_ptr<ASTNode> node);
+    void visitReturn(shared_ptr<ASTNode> node);
+    void visitIncrDecr(shared_ptr<ASTNode> node);
+    void visitForStmt(shared_ptr<ASTNode> node);
+    string visitExpr(shared_ptr<ASTNode> node);   // returns resolved type
+    string visitArrayAccess(shared_ptr<ASTNode> node);
+
+    // Helpers
+    string resolveType(const string& t1, const string& t2,
+                       TypeConversion* conv = nullptr);  // conv filled when promotion occurs
+    bool   isAssignmentCompatible(const string& lhsType, const string& rhsType);
+    bool   isNumericType(const string& t);
+    bool   isIntegerType(const string& t);
+    bool   isStringType(const string& t);
+    bool   isCharType(const string& t);
+    int    countArrayElements(shared_ptr<ASTNode> arrayNode);
+    bool   usesVariable(shared_ptr<ASTNode> node, const string& varName);
+};

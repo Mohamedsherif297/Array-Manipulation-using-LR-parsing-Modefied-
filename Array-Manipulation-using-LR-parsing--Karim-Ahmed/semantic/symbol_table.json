@@ -1,0 +1,17 @@
+{
+  "z": {
+    "type": "float",
+    "scope": "function(main)",
+    "isArray": false
+  },
+  "y": {
+    "type": "float",
+    "scope": "function(main)",
+    "isArray": false
+  },
+  "x": {
+    "type": "int",
+    "scope": "function(main)",
+    "isArray": false
+  }
+}

@@ -1,0 +1,6 @@
+// DECL x  type=int
+// DECL y  type=float
+// DECL z  type=float
+x = 5
+y = 7.5
+z = 12
