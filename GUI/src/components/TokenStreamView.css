@@ -1,0 +1,350 @@
+/* ============================================
+   TOKEN STREAM VIEW
+   ============================================ */
+
+.tsv-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+/* ---- Empty state ---- */
+.tsv-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: var(--text-secondary);
+}
+
+.tsv-empty-icon {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.tsv-empty p {
+  font-size: 15px;
+}
+
+/* ---- Toolbar ---- */
+.tsv-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-default);
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.tsv-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.tsv-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tsv-search {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 6px 12px;
+  width: 220px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.tsv-search:focus {
+  border-color: var(--accent-primary);
+}
+
+.tsv-count {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.tsv-view-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tsv-view-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.tsv-view-btn.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+/* ---- Filter pills ---- */
+.tsv-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-default);
+  flex-shrink: 0;
+}
+
+.tsv-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  letter-spacing: 0.3px;
+}
+
+.tsv-filter-pill:hover {
+  opacity: 0.85;
+  color: var(--text-primary);
+}
+
+.tsv-filter-pill.active {
+  border-color: currentColor;
+  opacity: 1;
+  color: var(--text-primary);
+}
+
+.tsv-pill-count {
+  background: rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 1px 5px;
+  font-size: 10px;
+}
+
+/* ---- Content area ---- */
+.tsv-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ---- Table view ---- */
+.tsv-table-wrapper {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.tsv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tsv-th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 2px solid var(--border-default);
+  z-index: 1;
+}
+
+.tsv-th-num    { width: 52px; text-align: center; }
+.tsv-th-line   { width: 64px; text-align: center; }
+.tsv-th-type   { width: 160px; }
+.tsv-th-lexeme { }
+
+.tsv-row {
+  border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.05));
+  transition: background 0.1s;
+}
+
+.tsv-row:hover {
+  background: var(--bg-hover);
+}
+
+.tsv-td {
+  padding: 8px 14px;
+  vertical-align: middle;
+}
+
+.tsv-td-num {
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.tsv-td-line {
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.tsv-td-type {}
+
+.tsv-type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.tsv-lexeme {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+/* ---- Stream view ---- */
+.tsv-stream {
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
+}
+
+.tsv-token-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: default;
+  transition: transform 0.1s;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.tsv-token-chip:hover {
+  transform: translateY(-2px);
+}
+
+.tsv-chip-type {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  opacity: 0.7;
+  margin-top: 3px;
+  font-family: system-ui, sans-serif;
+}
+
+/* ============================================
+   TOKEN TYPE COLOR CLASSES
+   ============================================ */
+
+.token-datatype {
+  background: rgba(86, 156, 214, 0.18);
+  color: #569cd6;
+  border-color: rgba(86, 156, 214, 0.3) !important;
+}
+
+.token-identifier {
+  background: rgba(156, 220, 254, 0.12);
+  color: #9cdcfe;
+  border-color: rgba(156, 220, 254, 0.25) !important;
+}
+
+.token-constant {
+  background: rgba(181, 206, 168, 0.18);
+  color: #b5cea8;
+  border-color: rgba(181, 206, 168, 0.3) !important;
+}
+
+.token-string {
+  background: rgba(206, 145, 120, 0.18);
+  color: #ce9178;
+  border-color: rgba(206, 145, 120, 0.3) !important;
+}
+
+.token-char {
+  background: rgba(206, 145, 120, 0.12);
+  color: #d7a07a;
+  border-color: rgba(206, 145, 120, 0.25) !important;
+}
+
+.token-reserved {
+  background: rgba(197, 134, 192, 0.18);
+  color: #c586c0;
+  border-color: rgba(197, 134, 192, 0.3) !important;
+}
+
+.token-operator {
+  background: rgba(212, 212, 212, 0.12);
+  color: #d4d4d4;
+  border-color: rgba(212, 212, 212, 0.2) !important;
+}
+
+.token-symbol {
+  background: rgba(204, 204, 204, 0.1);
+  color: #aaaaaa;
+  border-color: rgba(204, 204, 204, 0.18) !important;
+}
+
+.token-bracket {
+  background: rgba(255, 215, 0, 0.12);
+  color: #ffd700;
+  border-color: rgba(255, 215, 0, 0.25) !important;
+}
+
+.token-eof {
+  background: rgba(128, 128, 128, 0.15);
+  color: #808080;
+  border-color: rgba(128, 128, 128, 0.25) !important;
+  font-style: italic;
+}
+
+.token-illegal {
+  background: rgba(244, 71, 71, 0.18);
+  color: #f44747;
+  border-color: rgba(244, 71, 71, 0.3) !important;
+}
+
+/* Light theme overrides */
+[data-theme="light"] .token-datatype    { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd !important; }
+[data-theme="light"] .token-identifier  { background: #e0f2fe; color: #0369a1; border-color: #7dd3fc !important; }
+[data-theme="light"] .token-constant    { background: #dcfce7; color: #15803d; border-color: #86efac !important; }
+[data-theme="light"] .token-string      { background: #fef3c7; color: #b45309; border-color: #fcd34d !important; }
+[data-theme="light"] .token-char        { background: #fff7ed; color: #c2410c; border-color: #fdba74 !important; }
+[data-theme="light"] .token-reserved    { background: #fae8ff; color: #7e22ce; border-color: #d8b4fe !important; }
+[data-theme="light"] .token-operator    { background: #f1f5f9; color: #334155; border-color: #cbd5e1 !important; }
+[data-theme="light"] .token-symbol      { background: #f8fafc; color: #64748b; border-color: #e2e8f0 !important; }
+[data-theme="light"] .token-bracket     { background: #fefce8; color: #854d0e; border-color: #fde047 !important; }
+[data-theme="light"] .token-eof         { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0 !important; }
+[data-theme="light"] .token-illegal     { background: #fee2e2; color: #b91c1c; border-color: #fca5a5 !important; }

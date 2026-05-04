@@ -5,6 +5,7 @@ import SymbolTableView from './SymbolTableView'
 import LearnView from './LearnView'
 import ExprTreeView from './ExprTreeView'
 import ParseTraceView from './ParseTraceView'
+import TokenStreamView from './TokenStreamView'
 import './OutputPanel.css'
 
 interface OutputPanelProps {
@@ -40,68 +41,87 @@ function OutputPanel({
 
   // Check if there are errors
   const hasErrors = output?.errors && output.errors.length > 0
+  // Tokens are available as long as lexical phase ran (even if later phases failed)
+  const hasTokens = output?.tokens && output.tokens.length > 0
 
   return (
     <div className="output-panel">
-      {/* Only show tabs if compilation was successful (no errors) */}
-      {!hasErrors && (
+      {/* Show tab bar when there's output — always show Tokens tab if tokens exist */}
+      {output && (hasTokens || !hasErrors) && (
         <div className="tab-bar">
-          <button
-            className={`tab ${activeTab === 'tac' ? 'active' : ''}`}
-            onClick={() => onTabChange('tac')}
-          >
-            <span className="tab-icon">T</span>
-            <span className="tab-label">TAC</span>
-            {output?.tac && (
-              <span className="tab-badge">{getTacLineCount()}</span>
-            )}
-          </button>
+          {/* Tokens tab is always first and always visible when tokens exist */}
+          {hasTokens && (
+            <button
+              className={`tab ${activeTab === 'tokens' ? 'active' : ''}`}
+              onClick={() => onTabChange('tokens')}
+            >
+              <span className="tab-icon">🔤</span>
+              <span className="tab-label">Tokens</span>
+              <span className="tab-badge">{output.tokens!.length}</span>
+            </button>
+          )}
 
-          <button
-            className={`tab ${activeTab === 'ast' ? 'active' : ''}`}
-            onClick={() => onTabChange('ast')}
-          >
-            <span className="tab-icon">AST</span>
-            <span className="tab-label">AST</span>
-          </button>
+          {/* Remaining tabs only shown on successful compilation */}
+          {!hasErrors && (
+            <>
+              <button
+                className={`tab ${activeTab === 'tac' ? 'active' : ''}`}
+                onClick={() => onTabChange('tac')}
+              >
+                <span className="tab-icon">T</span>
+                <span className="tab-label">TAC</span>
+                {output?.tac && (
+                  <span className="tab-badge">{getTacLineCount()}</span>
+                )}
+              </button>
 
-          <button
-            className={`tab ${activeTab === 'symbols' ? 'active' : ''}`}
-            onClick={() => onTabChange('symbols')}
-          >
-            <span className="tab-icon">S</span>
-            <span className="tab-label">Symbols</span>
-            {output?.symbolTable && (
-              <span className="tab-badge">{getSymbolCount()}</span>
-            )}
-          </button>
+              <button
+                className={`tab ${activeTab === 'ast' ? 'active' : ''}`}
+                onClick={() => onTabChange('ast')}
+              >
+                <span className="tab-icon">AST</span>
+                <span className="tab-label">AST</span>
+              </button>
 
-          <button
-            className={`tab ${activeTab === 'learn' ? 'active' : ''} tab-highlight`}
-            onClick={() => onTabChange('learn')}
-          >
-            <span className="tab-icon">V</span>
-            <span className="tab-label">Variable Visualizer</span>
-          </button>
+              <button
+                className={`tab ${activeTab === 'symbols' ? 'active' : ''}`}
+                onClick={() => onTabChange('symbols')}
+              >
+                <span className="tab-icon">S</span>
+                <span className="tab-label">Symbols</span>
+                {output?.symbolTable && (
+                  <span className="tab-badge">{getSymbolCount()}</span>
+                )}
+              </button>
 
-          <button
-            className={`tab ${activeTab === 'exprtree' ? 'active' : ''}`}
-            onClick={() => onTabChange('exprtree')}
-          >
-            <span className="tab-icon">E</span>
-            <span className="tab-label">Expr Tree</span>
-          </button>
+              <button
+                className={`tab ${activeTab === 'learn' ? 'active' : ''} tab-highlight`}
+                onClick={() => onTabChange('learn')}
+              >
+                <span className="tab-icon">V</span>
+                <span className="tab-label">Variable Visualizer</span>
+              </button>
 
-          <button
-            className={`tab ${activeTab === 'parsetrace' ? 'active' : ''}`}
-            onClick={() => onTabChange('parsetrace')}
-          >
-            <span className="tab-icon">P</span>
-            <span className="tab-label">Parse Trace</span>
-            {output?.parseTrace && (
-              <span className="tab-badge">{output.parseTrace.length}</span>
-            )}
-          </button>
+              <button
+                className={`tab ${activeTab === 'exprtree' ? 'active' : ''}`}
+                onClick={() => onTabChange('exprtree')}
+              >
+                <span className="tab-icon">E</span>
+                <span className="tab-label">Expr Tree</span>
+              </button>
+
+              <button
+                className={`tab ${activeTab === 'parsetrace' ? 'active' : ''}`}
+                onClick={() => onTabChange('parsetrace')}
+              >
+                <span className="tab-icon">P</span>
+                <span className="tab-label">Parse Trace</span>
+                {output?.parseTrace && (
+                  <span className="tab-badge">{output.parseTrace.length}</span>
+                )}
+              </button>
+            </>
+          )}
         </div>
       )}
 
@@ -121,38 +141,44 @@ function OutputPanel({
             </div>
           </div>
         ) : hasErrors ? (
-          <div className="error-state">
-            <div className="error-header">
-              <div className="error-icon">Error</div>
-              <h3>Compilation Failed</h3>
-              <p>Found {output.errors?.length || 0} error{(output.errors?.length || 0) > 1 ? 's' : ''} in your code</p>
-            </div>
-            <div className="error-list">
-              {(output.errors || []).map((error, index) => (
-                <div key={index} className="error-item-detailed">
-                  <div className="error-item-header">
-                    <span className="error-number">Error {index + 1}</span>
-                    <span className="error-phase" style={{
-                      color: error.phase === 'syntax' ? 'var(--accent-error)' : 
-                             error.phase === 'semantic' ? 'var(--accent-warning)' : 
-                             'var(--text-tertiary)'
-                    }}>
-                      {error.phase.toUpperCase()}
-                    </span>
-                    {error.line && (
-                      <span className="error-line">Line {error.line}</span>
-                    )}
-                  </div>
-                  <div className="error-message-detailed">
-                    {error.message}
-                  </div>
+          <>
+            {activeTab === 'tokens' && hasTokens ? (
+              <TokenStreamView tokens={output.tokens || []} />
+            ) : (
+              <div className="error-state">
+                <div className="error-header">
+                  <div className="error-icon">Error</div>
+                  <h3>Compilation Failed</h3>
+                  <p>Found {output.errors?.length || 0} error{(output.errors?.length || 0) > 1 ? 's' : ''} in your code</p>
                 </div>
-              ))}
-            </div>
-            <div className="error-footer">
-              <p>Tip: Fix the errors above and compile again</p>
-            </div>
-          </div>
+                <div className="error-list">
+                  {(output.errors || []).map((error, index) => (
+                    <div key={index} className="error-item-detailed">
+                      <div className="error-item-header">
+                        <span className="error-number">Error {index + 1}</span>
+                        <span className="error-phase" style={{
+                          color: error.phase === 'syntax' ? 'var(--accent-error)' : 
+                                 error.phase === 'semantic' ? 'var(--accent-warning)' : 
+                                 'var(--text-tertiary)'
+                        }}>
+                          {error.phase.toUpperCase()}
+                        </span>
+                        {error.line && (
+                          <span className="error-line">Line {error.line}</span>
+                        )}
+                      </div>
+                      <div className="error-message-detailed">
+                        {error.message}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="error-footer">
+                  <p>Tip: Fix the errors above and compile again</p>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <>
             {activeTab === 'tac' && (
@@ -180,6 +206,9 @@ function OutputPanel({
             )}
             {activeTab === 'parsetrace' && (
               <ParseTraceView steps={output.parseTrace || []} />
+            )}
+            {activeTab === 'tokens' && (
+              <TokenStreamView tokens={output.tokens || []} />
             )}
           </>
         )}

@@ -421,6 +421,27 @@ app.post('/api/compile', async (req, res) => {
     if (mainOutput.includes('Parsing Successful') || mainOutput.includes('Parsing successful')) {
       phases.syntax = true
     }
+
+    // Parse token stream from lexer output
+    // Format: "   [TYPE] lexeme" lines between "Token Stream:" and "Symbol Table:"
+    const tokens = []
+    const tokenStreamStart = mainOutput.indexOf('📋 Token Stream:')
+    const tokenStreamEnd = mainOutput.indexOf('📊 Symbol Table:')
+    if (tokenStreamStart !== -1) {
+      const streamSection = tokenStreamEnd !== -1
+        ? mainOutput.slice(tokenStreamStart, tokenStreamEnd)
+        : mainOutput.slice(tokenStreamStart)
+      const tokenLineRegex = /\[([A-Z_]+)\]\s+(.+)/g
+      let match
+      while ((match = tokenLineRegex.exec(streamSection)) !== null) {
+        tokens.push({ type: match[1], lexeme: match[2].trim(), line: 0 })
+      }
+    }
+
+    // Try to get line numbers from the raw output — Main.cpp doesn't print them,
+    // but we can re-derive them by scanning the source code for each token's position.
+    // As a simpler approach, parse the token display format if it ever includes line info.
+    // The current Main.cpp format is "[TYPE] lexeme" without line numbers, so we leave line=0.
     
     // Check for syntax errors with better parsing
     if (mainOutput.includes('SYNTAX ERROR') || mainOutput.includes('Parsing failed')) {
@@ -491,7 +512,8 @@ app.post('/api/compile', async (req, res) => {
         success: false,
         phases,
         errors,
-        warnings
+        warnings,
+        tokens
       })
     }
 
@@ -610,6 +632,7 @@ app.post('/api/compile', async (req, res) => {
         phases,
         errors,
         warnings,
+        tokens,
         ast: ast || annotatedAst,
         symbolTable,
         tac: null,
@@ -718,6 +741,7 @@ app.post('/api/compile', async (req, res) => {
       phases,
       errors,
       warnings,
+      tokens,
       ast: ast || annotatedAst,
       symbolTable,
       tac,

@@ -22,6 +22,7 @@ export interface CompilerOutput {
   warnings?: string[]
   success?: boolean
   parseTrace?: Array<{ stack: string; input: string; action: string }>
+  tokens?: Array<{ type: string; lexeme: string; line: number }>
   phases?: {
     lexical: boolean
     syntax: boolean
@@ -38,7 +39,7 @@ export interface ExecutionStep {
 }
 
 export type CompilationStatus = 'idle' | 'compiling' | 'success' | 'error'
-export type OutputTab = 'tac' | 'ast' | 'symbols' | 'learn' | 'exprtree' | 'parsetrace'
+export type OutputTab = 'tac' | 'ast' | 'symbols' | 'learn' | 'exprtree' | 'parsetrace' | 'tokens'
 
 // Parse TAC text into ExecutionStep timeline
 function buildExecutionSteps(tac: string): ExecutionStep[] {
